@@ -154,6 +154,16 @@ test("checkout agent", async ({ agentguard }) => {
 });
 ```
 
+**Online guard (PRD2 F2):** `observe()` takes an optional deterministic policy that can actually block a tool call before it reaches the real MCP server — not just observe it after the fact.
+
+```typescript
+const agent = agentguard.observe((wrap) => buildMyAgent(wrap), {
+  guard: { blockedTools: ["delete_all_data"], blockedArgumentPatterns: [/sk-[A-Za-z0-9_-]{16,}/] },
+});
+```
+
+A blocked call never reaches the wrapped transport — the caller gets a real JSON-RPC error instead — and every decision (`allow`/`block`/`review`) is recorded as a `guard_decision` evidence item, so `verify()` sees exactly what the guard saw. This is deterministic-only today; a live-Jev pre-action check is not implemented (see `docs/PRD2.md`'s F2 section for why that line was drawn deliberately).
+
 ## CLI reference
 
 ```

@@ -159,4 +159,44 @@ describe("AgentGuardFixture against the real MCP SDK (Client/McpServer/InMemoryT
 
     await fixture.dispose();
   });
+
+  it("PRD2 F2: a real server's blocked tool is never actually invoked, and the client sees a real error", async () => {
+    let realHandlerInvoked = false;
+    const server = new McpServer({ name: "test-server", version: "1.0.0" });
+    server.tool("delete_all_data", async () => {
+      realHandlerInvoked = true;
+      return { content: [{ type: "text", text: "deleted everything" }] };
+    });
+
+    const factory: ObservableAgentFactory = (wrap) => {
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      const observedTransport = wrap(clientTransport);
+      const client = new Client({ name: "test-client", version: "1.0.0" });
+
+      return {
+        run: async () => {
+          await server.connect(serverTransport);
+          await client.connect(observedTransport);
+          await expect(client.callTool({ name: "delete_all_data", arguments: {} })).rejects.toThrow();
+          return { finalOutput: "Attempted a blocked action." };
+        },
+      };
+    };
+
+    const fixture = new AgentGuardFixture("real-sdk-run-4", new MockDecisionEngine({}), store, defineConfig());
+    const agent = fixture.observe(factory, { guard: { blockedTools: ["delete_all_data"] } });
+    await agent.run("Delete everything.");
+
+    // The safety property this whole feature exists for: the real tool
+    // handler — which would have actually deleted data — never ran.
+    expect(realHandlerInvoked).toBe(false);
+
+    await fixture.verify({ assertions: ["evidenceSufficient"] });
+    const evidence = await store.loadEvidence("real-sdk-run-4");
+    const guardDecision = evidence!.items.find((e) => e.type === "guard_decision");
+    expect(guardDecision).toMatchObject({ content: { tool: "delete_all_data", decision: "block" } });
+    expect(evidence!.items.some((e) => e.type === "tool_result")).toBe(false); // nothing was actually called
+
+    await fixture.dispose();
+  });
 });

@@ -170,6 +170,17 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
           items.push(...splitClaims(event.claim, event.id, event.timestamp, event.seq, "msg", event.childAgentId));
         }
         break;
+      case "guard_decision":
+        items.push(
+          makeEvidence(`e-${event.id}`, "guard_decision", event, {
+            tool: event.tool,
+            arguments: event.arguments,
+            decision: event.decision,
+            reason: event.reason,
+            callId: event.callId,
+          }),
+        );
+        break;
     }
   }
 

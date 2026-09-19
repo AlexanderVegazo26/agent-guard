@@ -17,7 +17,7 @@ import {
 } from "@agent-guard/core";
 import { evaluate } from "@agent-guard/assertions";
 import type { DecisionEngine } from "@agent-guard/decision";
-import { HttpFaultProxy, ObservingTransport, type CapturedEvent, type FaultProxy } from "@agent-guard/observe";
+import { HttpFaultProxy, ObservingTransport, type CapturedEvent, type FaultProxy, type GuardPolicy } from "@agent-guard/observe";
 import type { ObservableAgent, ObservableAgentFactory } from "./agent.js";
 
 export interface HttpFaultInjection {
@@ -54,7 +54,8 @@ type EventDraft =
       error?: string;
     }
   | { type: "fault"; faultId: string; spec: FaultSpec }
-  | { type: "tool_definition"; tool: string; description?: string; inputSchema?: unknown };
+  | { type: "tool_definition"; tool: string; description?: string; inputSchema?: unknown }
+  | { type: "guard_decision"; tool: string; arguments: unknown; decision: "allow" | "block" | "review"; reason: string; callId?: string };
 
 /**
  * PRD §9.1 — the `agentguard` test fixture. `observe()` wraps the agent's
@@ -106,8 +107,15 @@ export class AgentGuardFixture {
   }
   private startedProxyInfo: { port: number; caCert?: Buffer } | null = null;
 
-  observe<T extends ObservableAgent>(factory: ObservableAgentFactory<T>): T {
-    const agent = factory((transport: Transport) => new ObservingTransport(transport, (e) => this.recordCaptured(e)));
+  /**
+   * `options.guard` (PRD2 F2) wires the online guard's deterministic
+   * pre-action policy into the wrapped MCP transport: a blocked or
+   * review-flagged tool call never reaches the real transport, and the
+   * decision is recorded as a `guard_decision` event regardless. Omitted
+   * (the default): pure observation, unchanged from before F2 existed.
+   */
+  observe<T extends ObservableAgent>(factory: ObservableAgentFactory<T>, options: { guard?: GuardPolicy } = {}): T {
+    const agent = factory((transport: Transport) => new ObservingTransport(transport, (e) => this.recordCaptured(e), { guard: options.guard }));
     const observed = { ...agent };
     observed.run = async (task: string) => {
       this.task = task;
@@ -189,6 +197,10 @@ export class AgentGuardFixture {
     }
     if (event.kind === "tool_definition") {
       this.push({ type: "tool_definition", tool: event.tool, description: event.description, inputSchema: event.inputSchema });
+      return;
+    }
+    if (event.kind === "guard_decision") {
+      this.push({ type: "guard_decision", tool: event.tool, arguments: event.arguments, decision: event.decision, reason: event.reason, callId: event.callId });
       return;
     }
     // The network call the tool made has very likely already completed —

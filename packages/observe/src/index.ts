@@ -12,3 +12,4 @@
 export * from "./proxy.js";
 export { DefaultRedactor, type Redactor, type RedactionAudit, type RedactionConfig } from "@agent-guard/core";
 export * from "./mcp.js";
+export * from "./guard.js";

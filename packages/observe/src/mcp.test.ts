@@ -190,6 +190,56 @@ describe("ObservingTransport", () => {
     expect(events).toEqual([]);
   });
 
+  it("PRD2 F2: a blocked tool call never reaches the inner transport, and the caller gets a JSON-RPC error instead", async () => {
+    const [client, server] = createLinkedPair();
+    const events: CapturedEvent[] = [];
+    const observed = new ObservingTransport(client, (e) => events.push(e), { guard: { blockedTools: ["delete_all_data"] } });
+
+    let serverSawIt = false;
+    server.onmessage = () => {
+      serverSawIt = true;
+    };
+
+    let caughtResponse: JSONRPCMessage | undefined;
+    observed.onmessage = (m) => {
+      caughtResponse = m;
+    };
+
+    await observed.send({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "delete_all_data", arguments: {} } });
+
+    // The real transport never saw the call at all — this is the safety
+    // property the whole feature exists for, not just "a warning was logged."
+    expect(serverSawIt).toBe(false);
+
+    // No tool_call/tool_result was recorded (nothing was actually
+    // called) — only the guard's own decision.
+    expect(events).toEqual([
+      { kind: "guard_decision", tool: "delete_all_data", arguments: {}, decision: "block", reason: expect.stringContaining("delete_all_data"), callId: "1" },
+    ]);
+
+    // The caller still gets a real response — a synthesized JSON-RPC
+    // error, not a hang — delivered asynchronously.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(caughtResponse).toMatchObject({ id: 1, error: { message: expect.stringContaining("Blocked by AgentGuard") } });
+  });
+
+  it("PRD2 F2: an allowed tool call is unaffected by a guard policy that doesn't match it", async () => {
+    const [client, server] = createLinkedPair();
+    const events: CapturedEvent[] = [];
+    const observed = new ObservingTransport(client, (e) => events.push(e), { guard: { blockedTools: ["delete_all_data"] } });
+
+    let receivedByServer: JSONRPCMessage | undefined;
+    server.onmessage = (m) => {
+      receivedByServer = m;
+    };
+
+    const request: JSONRPCMessage = { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "add_todo", arguments: { text: "milk" } } };
+    await observed.send(request);
+
+    expect(receivedByServer).toEqual(request);
+    expect(events).toEqual([{ kind: "tool_call", callId: "1", tool: "add_todo", arguments: { text: "milk" } }]);
+  });
+
   it("does not intercept a non-tools/call request (e.g. resources/list)", async () => {
     const [client, server] = createLinkedPair();
     const events: CapturedEvent[] = [];

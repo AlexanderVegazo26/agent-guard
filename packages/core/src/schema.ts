@@ -149,6 +149,26 @@ export const AgentResultEvent = BaseEvent.extend({
   claim: z.string().optional(),
 });
 
+// PRD2 F2 — the online guard's own decision, recorded as an event so
+// "every guard decision is an event in the run" (F2's own requirement)
+// and offline `verify()` can be run against the exact same evidence the
+// guard saw. `GuardDecisionKind` deliberately excludes any notion of a
+// pending/async "review" outcome resolving later — PRD v0.6 §10.4's
+// reliability floor applies here too: an engine that can't decide
+// blocks, it never allows.
+export const GuardDecisionKind = z.enum(["allow", "block", "review"]);
+export type GuardDecisionKind = z.infer<typeof GuardDecisionKind>;
+
+export const GuardDecisionEvent = BaseEvent.extend({
+  type: z.literal("guard_decision"),
+  tool: z.string(),
+  arguments: z.unknown(),
+  decision: GuardDecisionKind,
+  reason: z.string(),
+  /** The tool_call this decision governed, when the guard sits in front of a real MCP transport. */
+  callId: z.string().optional(),
+});
+
 export const AgentEvent = z.discriminatedUnion("type", [
   MessageEvent,
   ToolCallEvent,
@@ -159,6 +179,7 @@ export const AgentEvent = z.discriminatedUnion("type", [
   FaultEvent,
   ToolDefinitionEvent,
   AgentSpawnEvent,
+  GuardDecisionEvent,
   AgentResultEvent,
 ]);
 export type AgentEvent = z.infer<typeof AgentEvent>;
@@ -206,6 +227,7 @@ export const EvidenceType = z.enum([
   "tool_definition",
   "agent_spawn",
   "agent_result",
+  "guard_decision",
 ]);
 export type EvidenceType = z.infer<typeof EvidenceType>;
 

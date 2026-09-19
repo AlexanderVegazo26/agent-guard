@@ -1,5 +1,6 @@
 import type { JSONRPCMessage, MessageExtraInfo } from "@modelcontextprotocol/sdk/types.js";
 import type { Transport, TransportSendOptions } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { evaluateGuard, type GuardPolicy, type GuardResult } from "./guard.js";
 
 /**
  * §4.1 — MCP interception sits at the transport, not at the agent's
@@ -45,7 +46,17 @@ export interface CapturedToolDefinition {
   inputSchema?: unknown;
 }
 
-export type CapturedEvent = CapturedToolCall | CapturedToolResult | CapturedToolDefinition;
+/** PRD2 F2 — the online guard's own decision on an outbound tool call, recorded as an event regardless of what it decided. */
+export interface CapturedGuardDecision {
+  kind: "guard_decision";
+  tool: string;
+  arguments: unknown;
+  decision: GuardResult["decision"];
+  reason: string;
+  callId: string;
+}
+
+export type CapturedEvent = CapturedToolCall | CapturedToolResult | CapturedToolDefinition | CapturedGuardDecision;
 export type EventSink = (event: CapturedEvent) => void;
 
 interface ToolCallRequest {
@@ -78,16 +89,34 @@ function isResponseLike(message: JSONRPCMessage): boolean {
   return "id" in message && ("result" in message || "error" in message) && !("method" in message);
 }
 
+export interface ObservingTransportOptions {
+  /**
+   * PRD2 F2 — when provided, every outbound `tools/call` is checked
+   * against this policy before being forwarded. Omitted (the default):
+   * pure pass-through, exactly the behavior this transport had before
+   * the guard existed — TRD §4.2's "the observer records; it never
+   * filters, interprets or decides" describes the no-guard case, and
+   * remains true for anyone who doesn't opt in.
+   */
+  guard?: GuardPolicy;
+}
+
 /**
  * Wraps an existing MCP `Transport`. Every `send()` (outbound) and every
  * `onmessage` delivery (inbound) passes through unchanged to the wrapped
- * transport / the caller's own handler — this is a pass-through, not a
- * proxy that can drop or alter traffic (TRD §4.2: "the observer records;
- * it never filters, interprets or decides").
+ * transport / the caller's own handler by default — TRD §4.2: "the
+ * observer records; it never filters, interprets or decides." Passing a
+ * `guard` policy is the one deliberate exception PRD2 F2 adds: a blocked
+ * or review-flagged tool call never reaches the real transport at all,
+ * and the caller gets a real JSON-RPC error response instead of a
+ * fabricated success — the reliability floor (PRD v0.6 §10.4) applies to
+ * the guard exactly as it does to the decision engine: unable to
+ * confidently allow means block, never a silent pass.
  */
 export class ObservingTransport implements Transport {
   private readonly pendingCalls = new Map<string, { tool: string; arguments: unknown }>();
   private readonly pendingListRequests = new Set<string>();
+  private readonly guardPolicy: GuardPolicy | undefined;
 
   onclose?: () => void;
   onerror?: (error: Error) => void;
@@ -96,7 +125,9 @@ export class ObservingTransport implements Transport {
   constructor(
     private readonly inner: Transport,
     private readonly sink: EventSink,
+    options: ObservingTransportOptions = {},
   ) {
+    this.guardPolicy = options.guard;
     this.inner.onmessage = (message, extra) => {
       this.observeInbound(message);
       this.onmessage?.(message, extra);
@@ -118,8 +149,43 @@ export class ObservingTransport implements Transport {
   }
 
   async send(message: JSONRPCMessage, options?: TransportSendOptions): Promise<void> {
+    if (this.guardPolicy && isToolCallRequest(message)) {
+      const result = evaluateGuard(message.params.name, message.params.arguments, this.guardPolicy);
+      if (result.decision !== "allow") {
+        this.blockOutbound(message, result);
+        return;
+      }
+    }
     this.observeOutbound(message);
     return this.inner.send(message, options);
+  }
+
+  /**
+   * The call never reaches `this.inner` (the real transport/server) —
+   * that's the whole point. The caller still needs *some* response, or
+   * their `client.callTool()` promise hangs forever, so a real JSON-RPC
+   * error is synthesized and delivered the same way a real response
+   * would arrive: via `onmessage`, on a fresh microtask rather than
+   * synchronously inside `send()` (the caller may not have finished
+   * registering its response handler for this call yet).
+   */
+  private blockOutbound(message: { id: string | number; params: { name: string; arguments?: unknown } }, result: GuardResult): void {
+    const callId = String(message.id);
+    this.sink({
+      kind: "guard_decision",
+      tool: message.params.name,
+      arguments: message.params.arguments,
+      decision: result.decision,
+      reason: result.reason,
+      callId,
+    });
+
+    const errorResponse = {
+      jsonrpc: "2.0" as const,
+      id: message.id,
+      error: { code: -32000, message: `Blocked by AgentGuard (${result.decision}): ${result.reason}` },
+    };
+    queueMicrotask(() => this.onmessage?.(errorResponse as JSONRPCMessage));
   }
 
   async close(): Promise<void> {
