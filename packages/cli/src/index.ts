@@ -7,6 +7,7 @@ import { runReplayCommand } from "./commands/replay.js";
 import { runDoctorCommand } from "./commands/doctor.js";
 import { runInitCommand } from "./commands/init.js";
 import { runReportCommand } from "./commands/report.js";
+import { runCompareCommand } from "./commands/compare.js";
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
@@ -66,6 +67,17 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "compare") {
+    const [beforeId, afterId] = rest.filter((a) => !a.startsWith("--"));
+    if (!beforeId || !afterId) {
+      console.error("agentguard compare: two run ids are required, e.g. `agentguard compare run-v1 run-v2`");
+      process.exitCode = 1;
+      return;
+    }
+    process.exitCode = await runCompareCommand({ beforeId, afterId, storeRoot: flagValue(rest, "--store") });
+    return;
+  }
+
   console.error(`agentguard: unknown command "${command}"`);
   printHelp();
   process.exitCode = 1;
@@ -87,6 +99,7 @@ function printHelp(): void {
       "  calibrate [--store <dir>]                     Report the §6.9 calibration curve",
       "  doctor [--live]                               Verify the environment (Node/.nvmrc, API key, engine capabilities)",
       "  report [--store <dir>]                        Write json/junit/html reports from every stored run's decisions",
+      "  compare <before-run-id> <after-run-id> [--store <dir>]  Diff two stored runs' verdicts (exit 1 on any regression)",
     ].join("\n"),
   );
 }
