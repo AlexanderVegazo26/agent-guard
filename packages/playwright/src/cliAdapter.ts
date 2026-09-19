@@ -39,12 +39,15 @@ export function parseCliCommand(command: string): ParsedCliCommand {
 }
 
 /**
- * The real CLI's snapshot output is prose, not JSON (PRD §30: "concise
- * snapshots ... after commands"). This extracts the two fields every
- * assertion actually needs (URL, title) from the common `Page URL: ...` /
- * `Page Title: ...` lines documented in Playwright's own examples; anything
- * else in the snapshot is kept verbatim in `snapshot` rather than parsed
- * further (TRD §6.5 rule 1 — accessibility-snapshot text, not DOM).
+ * The real CLI's output is prose, not JSON (PRD §30: "concise snapshots ...
+ * after commands"). This extracts the two fields every assertion actually
+ * needs (URL, title) from the `Page URL: ...` / `Page Title: ...` lines —
+ * confirmed against a real `@playwright/cli` session (2026-09-19) to appear
+ * after **every** command, not just `snapshot`/`screenshot` as PRD §30's
+ * prose reads: `open`, `goto`, `click`, `fill`, etc. all print the same
+ * `### Page` block. Anything else in the output is kept verbatim in
+ * `snapshot`/`raw` rather than parsed further (TRD §6.5 rule 1 —
+ * accessibility-snapshot text, not DOM).
  */
 function parseSnapshotFields(output: string): { url?: string; title?: string } {
   const urlMatch = /page url:\s*(\S+)/i.exec(output);
@@ -60,6 +63,7 @@ function looksLikeError(output: string): boolean {
   return /^\s*error[:\s]/i.test(output) || /\berror:/i.test(output);
 }
 
+/** Verbs whose output *is* an explicit snapshot request, vs. incidental page state on any other command. */
 const SNAPSHOT_VERBS = new Set(["snapshot", "screenshot"]);
 
 // Mirrors `AgentGuardFixture`'s `EventDraft` (fixture.ts): TS cannot
@@ -69,7 +73,7 @@ const SNAPSHOT_VERBS = new Set(["snapshot", "screenshot"]);
 type EventDraft =
   | { type: "tool_call"; callId: string; tool: string; arguments: unknown }
   | { type: "tool_result"; callId: string; success: boolean; result: unknown }
-  | { type: "browser_state"; kind: "snapshot"; url?: string; title?: string; snapshot: unknown };
+  | { type: "browser_state"; kind: "snapshot" | "navigation"; url?: string; title?: string; snapshot: unknown };
 
 export class PlaywrightCliAdapter {
   private readonly events: AgentEvent[] = [];
@@ -115,9 +119,10 @@ export class PlaywrightCliAdapter {
     const success = !looksLikeError(output);
     this.resolvePending(success, { raw: output });
 
-    if (SNAPSHOT_VERBS.has(verb.toLowerCase())) {
-      const { url, title } = parseSnapshotFields(output);
-      this.push({ type: "browser_state", kind: "snapshot", url, title, snapshot: output });
+    const { url, title } = parseSnapshotFields(output);
+    if (url !== undefined || title !== undefined) {
+      const kind = SNAPSHOT_VERBS.has(verb.toLowerCase()) ? "snapshot" : "navigation";
+      this.push({ type: "browser_state", kind, url, title, snapshot: output });
     }
   }
 

@@ -60,6 +60,32 @@ describe("PlaywrightCliAdapter", () => {
     expect(snapshot.title).toBe("My Todos");
   });
 
+  it("emits a browser_state[kind=navigation] for a non-snapshot command that still prints a Page URL/Title block (confirmed against a real @playwright/cli session)", async () => {
+    const adapter = new PlaywrightCliAdapter();
+    await adapter.start({ task: "Add a todo called Buy milk." });
+
+    adapter.captureCommand('fill e8 "Buy milk" --submit');
+    adapter.captureOutput(
+      [
+        "### Ran Playwright code",
+        "```js",
+        "await page.getByRole('textbox', { name: 'What needs to be done?' }).fill('Buy milk');",
+        "```",
+        "### Page",
+        "- Page URL: https://demo.playwright.dev/todomvc/#/",
+        "- Page Title: React • TodoMVC",
+        "### Snapshot",
+        "- [Snapshot](.playwright-cli/page-x.yml)",
+      ].join("\n"),
+    );
+
+    const run = await adapter.stop();
+    const browserStates = run.events.filter((e) => e.type === "browser_state") as { kind: string; url?: string; title?: string }[];
+    expect(browserStates).toHaveLength(1);
+    expect(browserStates[0]!.kind).toBe("navigation");
+    expect(browserStates[0]!.url).toBe("https://demo.playwright.dev/todomvc/#/");
+  });
+
   it("marks a tool_result as failed when the CLI output reports an error", async () => {
     const adapter = new PlaywrightCliAdapter();
     await adapter.start({ task: "Click a button that doesn't exist." });
