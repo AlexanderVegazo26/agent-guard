@@ -75,7 +75,7 @@ of question that goes to the engine.
 | `@agent-guard/observe` | A real HTTP/HTTPS fault-injecting proxy (with MITM for HTTPS), redaction, MCP transport observation |
 | `@agent-guard/playwright` | A Playwright Test fixture (`observe`/`inject`/`verify`) and a Playwright CLI transcript adapter |
 | `@agent-guard/mcp` | An MCP server exposing the run/evidence/assertion/mutation lifecycle to an orchestrating agent |
-| `@agent-guard/cli` | `agentguard` — `test`, `replay`, `calibrate`, `doctor`, `report`, `init` |
+| `@agent-guard/cli` | `agentguard` — `test`, `replay`, `calibrate`, `doctor`, `report`, `compare`, `init` |
 
 ## The 21 assertions
 
@@ -134,6 +134,7 @@ agentguard replay <run-id> [--live] [--escalate] [--assertions a,b]       Re-eva
 agentguard calibrate [--store <dir>]                         Report the calibration curve (needs ≥100 live samples)
 agentguard doctor [--live]                                   Verify Node/.nvmrc, API key, engine capabilities
 agentguard report [--store <dir>]                            Write json/junit/html reports from stored decisions
+agentguard compare <before-run-id> <after-run-id>            Diff two stored runs' verdicts (exit 1 on any regression)
 ```
 
 `agentguard test`/`replay` default to a scriptable **mock** decision engine —
@@ -153,7 +154,7 @@ failing the run.
 ```bash
 bun install
 bun run build   # tsc -b across the workspace
-bun run test    # vitest — 159 tests across all packages
+bun run test    # vitest — 165 tests across all packages
 bun run lint    # oxlint
 bun run test:e2e  # real Playwright Test CLI runner against the fixture
 ```
@@ -180,7 +181,8 @@ part of the normal test run.
 MVP-complete against the PRD/TRD: all 21 assertions implemented, the full
 20-fixture golden suite plus 10 correct-behavior fixtures, a real fault
 proxy with redaction, an MCP server, a Playwright CLI adapter, LLM
-escalation for uncertain verdicts, and json/junit/html reporting. 159 tests
+escalation for uncertain verdicts, a run-to-run comparison command
+(`agentguard compare`), and json/junit/html reporting. 165 tests
 + 2 real Playwright-CLI-run e2e tests, all green. Calibration is not yet statistically validated (needs ≥100 live
 samples per assertion) — confidence values from a live run are advisory
 until then.
