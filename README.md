@@ -129,8 +129,8 @@ test("checkout agent", async ({ agentguard }) => {
 
 ```
 agentguard init                                              Scaffold config + .agentguard/ + fixtures/ directories
-agentguard test [--fixtures <dir>] [--live] [--store <dir>]  Run the golden suite (mock engine by default)
-agentguard replay <run-id> [--live] [--assertions a,b]       Re-evaluate a stored run, no browser/agent/network
+agentguard test [--fixtures <dir>] [--live] [--escalate] [--store <dir>]  Run the golden suite (mock engine by default)
+agentguard replay <run-id> [--live] [--escalate] [--assertions a,b]       Re-evaluate a stored run, no browser/agent/network
 agentguard calibrate [--store <dir>]                         Report the calibration curve (needs ≥100 live samples)
 agentguard doctor [--live]                                   Verify Node/.nvmrc, API key, engine capabilities
 agentguard report [--store <dir>]                            Write json/junit/html reports from stored decisions
@@ -141,12 +141,19 @@ free, deterministic, no network. Pass `--live` to evaluate against the real
 Jev API instead; this costs money and should be run deliberately, not on
 every save.
 
+`--escalate` sends any assertion that lands in `REVIEW` on genuine Jev
+uncertainty (not a structural evidence gap, and not yet a fan-out assertion)
+to a frontier LLM for a root-cause **explanation** — never a verdict; status
+never changes. Requires `ANTHROPIC_API_KEY`; without it, `--escalate` warns
+and leaves those results as ordinary unexplained REVIEWs rather than
+failing the run.
+
 ## Development
 
 ```bash
 bun install
 bun run build   # tsc -b across the workspace
-bun run test    # vitest — 153 tests across all packages
+bun run test    # vitest — 159 tests across all packages
 bun run lint    # oxlint
 bun run test:e2e  # real Playwright Test CLI runner against the fixture
 ```
@@ -172,8 +179,8 @@ part of the normal test run.
 
 MVP-complete against the PRD/TRD: all 21 assertions implemented, the full
 20-fixture golden suite plus 10 correct-behavior fixtures, a real fault
-proxy with redaction, an MCP server, a Playwright CLI adapter, and
-json/junit/html reporting. 153 tests + 2 real Playwright-CLI-run e2e tests,
-all green. Calibration is not yet statistically validated (needs ≥100 live
+proxy with redaction, an MCP server, a Playwright CLI adapter, LLM
+escalation for uncertain verdicts, and json/junit/html reporting. 159 tests
++ 2 real Playwright-CLI-run e2e tests, all green. Calibration is not yet statistically validated (needs ≥100 live
 samples per assertion) — confidence values from a live run are advisory
 until then.
