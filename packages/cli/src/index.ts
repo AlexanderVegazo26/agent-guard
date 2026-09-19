@@ -15,6 +15,7 @@ import { runReviewListCommand, runReviewRecordCommand } from "./commands/review.
 import { runExportCommand, runVerifyPackCommand } from "./commands/exportPack.js";
 import { runHistoryCommand } from "./commands/history.js";
 import { runReviewPrCommand } from "./commands/reviewPr.js";
+import { runAuditFixturesCommand } from "./commands/auditFixtures.js";
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
@@ -182,6 +183,12 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "audit-fixtures") {
+    const fixturesRoot = flagValue(rest, "--fixtures") ?? path.join(process.cwd(), "fixtures", "golden");
+    process.exitCode = await runAuditFixturesCommand({ fixturesRoot });
+    return;
+  }
+
   if (command === "review-pr") {
     const base = flagValue(rest, "--base");
     const head = flagValue(rest, "--head");
@@ -284,6 +291,7 @@ function printHelp(): void {
       "  verify-pack <pack-dir>                         Recompute and check an exported pack's manifest",
       "  history --assertion <id> [--baseline <run-id>] [--store <dir>]   Per-assertion verdict series across stored runs",
       "  review-pr --base <ref> --head <ref> [--description <text>] [--test-results <path>]   Deterministic coding-agent checks against a real git diff",
+      "  audit-fixtures [--fixtures <dir>]              Check every fixture's mustCite ids resolve to real evidence",
       "  watch [--task <text>] [--config <path>] --transcript <file> | -- <command> [args...]   Zero-setup, no API key: point at any agent",
       "  autofix propose --agent-md <path> --runs <id1,id2,...> [--store <dir>]   Propose a diff for a recurring finding (never applies it)",
       "  autofix show <fix-id> [--store <dir>]         Print a proposed fix's diff/rationale (always labeled not validated)",
