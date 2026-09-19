@@ -1,11 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+  AgentEvent,
   AgentIdentity,
   DefaultEvidenceCompiler,
   FaultSpec,
   defineConfig,
-  type AgentEvent,
   type AgentRun,
   type AssertionId,
   type AssertionResult,
@@ -119,12 +119,26 @@ export class AgentGuardMcpServer {
         events: z.array(z.unknown()).optional(),
       },
       async ({ task, agent, events }) => {
+        // PRD2 review finding: `events` used to be cast straight to
+        // `AgentEvent[]` with no validation — a malformed event (wrong
+        // `seq` type, missing a discriminant field) reached the evidence
+        // compiler and assertion pipeline before failing, with an
+        // unhelpful stack trace instead of a clear tool error.
+        let validatedEvents: AgentEvent[] = [];
+        if (events && events.length > 0) {
+          const parsed = z.array(AgentEvent).safeParse(events);
+          if (!parsed.success) {
+            return errorResult(`agentguard_start_run: invalid events — ${parsed.error.message}`);
+          }
+          validatedEvents = parsed.data;
+        }
+
         const id = nextRunId();
         this.runs.set(id, {
           id,
           task,
           agent: agent ?? { name: "mcp-observed-agent" },
-          events: (events ?? []) as AgentEvent[],
+          events: validatedEvents,
           faults: [],
           startedAt: new Date().toISOString(),
         });
@@ -206,4 +220,8 @@ export class AgentGuardMcpServer {
 
 function jsonResult(value: unknown): { content: { type: "text"; text: string }[] } {
   return { content: [{ type: "text", text: JSON.stringify(value) }] };
+}
+
+function errorResult(message: string): { content: { type: "text"; text: string }[]; isError: true } {
+  return { content: [{ type: "text", text: JSON.stringify({ error: message }) }], isError: true };
 }

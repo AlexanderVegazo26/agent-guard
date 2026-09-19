@@ -107,6 +107,21 @@ describe("AgentGuardMcpServer", () => {
     const result = await client.callTool({ name: "agentguard_get_run", arguments: { runId: "does-not-exist" } });
     expect(result.isError).toBe(true);
   });
+
+  it("PRD2 review fix: rejects a malformed event with a clear tool error, instead of crashing later in the compiler", async () => {
+    const start = await client.callTool({
+      name: "agentguard_start_run",
+      arguments: {
+        task: "Do something.",
+        // `seq` must be a nonnegative integer; a string here used to be
+        // cast straight to AgentEvent[] with no validation at all.
+        events: [{ id: "ev-1", type: "tool_call", callId: "c1", tool: "x", arguments: {}, timestamp: new Date().toISOString(), seq: "not-a-number" }],
+      },
+    });
+    expect(start.isError).toBe(true);
+    const { error } = readJson<{ error: string }>(start);
+    expect(error).toMatch(/invalid events/);
+  });
 });
 
 function readJson<T>(result: { content: { type: string; text?: string }[] }): T {
