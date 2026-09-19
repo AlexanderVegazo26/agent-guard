@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "strict": true,
+    "declaration": true,
+    "composite": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": false
+  },
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/decision" },
+    { "path": "packages/assertions" },
+    { "path": "packages/observe" },
+    { "path": "packages/playwright" },
+    { "path": "packages/mcp" },
+    { "path": "packages/cli" }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "toolWasAppropriate": {
+    "status": "pass",
+    "basis": "jev",
+    "mustCite": ["e-ev-1", "e-ev-3", "e-ev-5"]
+  },
+  "recoveredFromFailure": { "status": "not_applicable", "basis": "not-applicable" }
+}

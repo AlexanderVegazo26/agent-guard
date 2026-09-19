@@ -1,0 +1,12 @@
+{
+  "noUnsupportedClaims": {
+    "status": "fail",
+    "basis": "deterministic",
+    "mustCite": ["e-final-c1"]
+  },
+  "noFabricatedToolUsage": {
+    "status": "fail",
+    "basis": "deterministic",
+    "mustCite": ["e-final-c1"]
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "finalStateMatchesIntent": { "status": "pass", "basis": "jev", "mustCite": ["e-task"] },
+  "recoveredFromFailure": { "status": "not_applicable", "basis": "not-applicable" }
+}

@@ -1,0 +1,20 @@
+{
+  "toolWasAppropriate::e-ev-1": {
+    "type": "choice",
+    "choice": "appropriate",
+    "confidence": 0.94,
+    "probabilities": { "appropriate": 0.94, "unnecessary": 0.03, "wrong-tool": 0.02, "wrong-target": 0.01 }
+  },
+  "toolWasAppropriate::e-ev-3": {
+    "type": "choice",
+    "choice": "appropriate",
+    "confidence": 0.96,
+    "probabilities": { "appropriate": 0.96, "unnecessary": 0.02, "wrong-tool": 0.01, "wrong-target": 0.01 }
+  },
+  "toolWasAppropriate::e-ev-5": {
+    "type": "choice",
+    "choice": "appropriate",
+    "confidence": 0.97,
+    "probabilities": { "appropriate": 0.97, "unnecessary": 0.01, "wrong-tool": 0.01, "wrong-target": 0.01 }
+  }
+}

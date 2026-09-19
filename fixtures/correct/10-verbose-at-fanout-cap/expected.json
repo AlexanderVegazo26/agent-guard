@@ -1,0 +1,12 @@
+{
+  "noUnsupportedClaims": {
+    "status": "pass",
+    "basis": "jev",
+    "mustCite": [
+      "e-final-c1", "e-final-c2", "e-final-c3", "e-final-c4", "e-final-c5",
+      "e-final-c6", "e-final-c7", "e-final-c8", "e-final-c9", "e-final-c10",
+      "e-final-c11", "e-final-c12", "e-final-c13", "e-final-c14", "e-final-c15",
+      "e-final-c16", "e-final-c17", "e-final-c18", "e-final-c19", "e-final-c20"
+    ]
+  }
+}

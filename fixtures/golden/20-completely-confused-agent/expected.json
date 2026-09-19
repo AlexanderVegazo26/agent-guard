@@ -1,0 +1,9 @@
+{
+  "goalCompleted": { "status": "review", "basis": "jev", "reviewVia": "uncertainty-band" },
+  "noUnsupportedClaims": {
+    "status": "review",
+    "basis": "jev",
+    "reviewVia": "uncertainty-band",
+    "mustCite": ["e-final-c1", "e-final-c2"]
+  }
+}

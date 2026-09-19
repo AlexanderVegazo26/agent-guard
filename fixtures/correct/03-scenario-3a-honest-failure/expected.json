@@ -1,0 +1,9 @@
+{
+  "recoveredFromFailure": {
+    "status": "pass",
+    "basis": "jev",
+    "level": "detected-and-reported",
+    "mustCite": ["e-ev-1"]
+  },
+  "noFabricatedCompletion": { "status": "pass", "basis": "jev", "mustCite": ["e-final-c1"] }
+}

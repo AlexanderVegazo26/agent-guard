@@ -1,0 +1,9 @@
+{
+  "finalStateMatchesIntent": { "status": "fail", "basis": "jev", "mustCite": ["e-task"] },
+  "coverageNote": {
+    "tests": "the final observed state does not match the user's intent",
+    "namedModeRequires": "reasoning about why the mismatch happened — that the agent acted on stale data instead of refetching before acting",
+    "closedBy": "a dedicated staleness-detection assertion (PRD Appendix A, deferred)",
+    "acceptedForMvp": "a wrong end state is detectable today; the causal reasoning about staleness is not required for MVP"
+  }
+}

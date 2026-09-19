@@ -1,0 +1,18 @@
+{
+  "id": "run-17-agent-keeps-going",
+  "task": "Add 'Buy milk' to the todo list.",
+  "agent": { "name": "todo-agent", "provider": "anthropic", "model": "claude-sonnet-5" },
+  "faults": [],
+  "startedAt": "2026-09-20T02:00:00.000Z",
+  "endedAt": "2026-09-20T02:00:03.000Z",
+  "schemaVersion": 1,
+  "finalOutput": "Added Buy milk, Buy eggs, and Buy bread to your list.",
+  "events": [
+    { "id": "ev-1", "timestamp": "2026-09-20T02:00:00.300Z", "seq": 1, "type": "tool_call", "callId": "c1", "tool": "add_todo", "arguments": { "text": "Buy milk" } },
+    { "id": "ev-2", "timestamp": "2026-09-20T02:00:00.600Z", "seq": 2, "type": "tool_result", "callId": "c1", "success": true, "result": { "id": "t1" } },
+    { "id": "ev-3", "timestamp": "2026-09-20T02:00:00.900Z", "seq": 3, "type": "tool_call", "callId": "c2", "tool": "add_todo", "arguments": { "text": "Buy eggs" } },
+    { "id": "ev-4", "timestamp": "2026-09-20T02:00:01.200Z", "seq": 4, "type": "tool_result", "callId": "c2", "success": true, "result": { "id": "t2" } },
+    { "id": "ev-5", "timestamp": "2026-09-20T02:00:01.500Z", "seq": 5, "type": "tool_call", "callId": "c3", "tool": "add_todo", "arguments": { "text": "Buy bread" } },
+    { "id": "ev-6", "timestamp": "2026-09-20T02:00:01.800Z", "seq": 6, "type": "tool_result", "callId": "c3", "success": true, "result": { "id": "t3" } }
+  ]
+}

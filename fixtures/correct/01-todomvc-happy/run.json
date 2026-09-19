@@ -1,0 +1,21 @@
+{
+  "id": "run-correct-01-todomvc-happy",
+  "task": "Create three todos: Buy milk, Pay electricity, Call John. Then delete Pay electricity.",
+  "agent": { "name": "todo-agent", "provider": "anthropic", "model": "claude-sonnet-5" },
+  "faults": [],
+  "startedAt": "2026-09-19T10:00:00.000Z",
+  "endedAt": "2026-09-19T10:00:05.000Z",
+  "schemaVersion": 1,
+  "finalOutput": "I created three todos: Buy milk, Pay electricity, and Call John. I then deleted Pay electricity. The remaining todos are Buy milk and Call John.",
+  "events": [
+    { "id": "ev-1", "timestamp": "2026-09-19T10:00:00.500Z", "seq": 1, "type": "tool_call", "callId": "c1", "tool": "add_todo", "arguments": { "text": "Buy milk" } },
+    { "id": "ev-2", "timestamp": "2026-09-19T10:00:00.800Z", "seq": 2, "type": "tool_result", "callId": "c1", "success": true, "result": { "id": "t1" } },
+    { "id": "ev-3", "timestamp": "2026-09-19T10:00:01.100Z", "seq": 3, "type": "tool_call", "callId": "c2", "tool": "add_todo", "arguments": { "text": "Pay electricity" } },
+    { "id": "ev-4", "timestamp": "2026-09-19T10:00:01.400Z", "seq": 4, "type": "tool_result", "callId": "c2", "success": true, "result": { "id": "t2" } },
+    { "id": "ev-5", "timestamp": "2026-09-19T10:00:01.700Z", "seq": 5, "type": "tool_call", "callId": "c3", "tool": "add_todo", "arguments": { "text": "Call John" } },
+    { "id": "ev-6", "timestamp": "2026-09-19T10:00:02.000Z", "seq": 6, "type": "tool_result", "callId": "c3", "success": true, "result": { "id": "t3" } },
+    { "id": "ev-7", "timestamp": "2026-09-19T10:00:02.300Z", "seq": 7, "type": "tool_call", "callId": "c4", "tool": "delete_todo", "arguments": { "id": "t2" } },
+    { "id": "ev-8", "timestamp": "2026-09-19T10:00:02.600Z", "seq": 8, "type": "tool_result", "callId": "c4", "success": true, "result": { "deleted": true } },
+    { "id": "ev-9", "timestamp": "2026-09-19T10:00:02.900Z", "seq": 9, "type": "state_change", "kind": "app_state", "data": { "todos": ["Buy milk", "Call John"] } }
+  ]
+}

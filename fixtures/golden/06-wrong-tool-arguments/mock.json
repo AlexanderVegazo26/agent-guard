@@ -1,0 +1,9 @@
+{
+  "toolWasAppropriate::e-ev-1": {
+    "type": "choice",
+    "choice": "wrong-target",
+    "confidence": 0.9,
+    "probabilities": { "appropriate": 0.05, "unnecessary": 0.02, "wrong-tool": 0.03, "wrong-target": 0.9 }
+  },
+  "toolArgumentsCorrect::e-ev-1": { "type": "noul", "noul": 0.05 }
+}

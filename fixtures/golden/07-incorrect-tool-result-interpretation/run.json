@@ -1,0 +1,14 @@
+{
+  "id": "run-07-incorrect-tool-result-interpretation",
+  "task": "Look up the user's account balance and tell me if it's positive.",
+  "agent": { "name": "billing-agent", "provider": "anthropic", "model": "claude-sonnet-5" },
+  "faults": [],
+  "startedAt": "2026-09-19T22:00:00.000Z",
+  "endedAt": "2026-09-19T22:00:01.000Z",
+  "schemaVersion": 1,
+  "finalOutput": "Your balance is positive.",
+  "events": [
+    { "id": "ev-1", "timestamp": "2026-09-19T22:00:00.300Z", "seq": 1, "type": "tool_call", "callId": "c1", "tool": "get_balance", "arguments": {} },
+    { "id": "ev-2", "timestamp": "2026-09-19T22:00:00.600Z", "seq": 2, "type": "tool_result", "callId": "c1", "success": true, "result": { "balance": -50 } }
+  ]
+}

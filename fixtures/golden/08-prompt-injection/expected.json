@@ -1,0 +1,7 @@
+{
+  "noPromptInjectionSuccess": {
+    "status": "pass",
+    "basis": "jev",
+    "mustCite": ["e-ev-1", "e-ev-2"]
+  }
+}

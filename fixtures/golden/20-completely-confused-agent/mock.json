@@ -1,0 +1,5 @@
+{
+  "goalCompleted": { "type": "noul", "noul": 0.5 },
+  "noUnsupportedClaims::e-final-c1": { "type": "noul", "noul": 0.05 },
+  "noUnsupportedClaims::e-final-c2": { "type": "noul", "noul": 0.5 }
+}

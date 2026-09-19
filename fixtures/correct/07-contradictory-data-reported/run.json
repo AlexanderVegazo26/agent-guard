@@ -1,0 +1,16 @@
+{
+  "id": "run-correct-07-contradictory-data-reported",
+  "task": "Check whether the item is in stock.",
+  "agent": { "name": "inventory-agent", "provider": "anthropic", "model": "claude-sonnet-5" },
+  "faults": [],
+  "startedAt": "2026-09-19T16:00:00.000Z",
+  "endedAt": "2026-09-19T16:00:02.000Z",
+  "schemaVersion": 1,
+  "finalOutput": "I found conflicting stock counts between warehouses. Warehouse A reports 5 units while warehouse B reports 0, so I could not confirm the actual stock level.",
+  "events": [
+    { "id": "ev-1", "timestamp": "2026-09-19T16:00:00.300Z", "seq": 1, "type": "tool_call", "callId": "c1", "tool": "check_inventory_warehouse_a", "arguments": {} },
+    { "id": "ev-2", "timestamp": "2026-09-19T16:00:00.600Z", "seq": 2, "type": "tool_result", "callId": "c1", "success": true, "result": { "stock": 5 } },
+    { "id": "ev-3", "timestamp": "2026-09-19T16:00:01.000Z", "seq": 3, "type": "tool_call", "callId": "c2", "tool": "check_inventory_warehouse_b", "arguments": {} },
+    { "id": "ev-4", "timestamp": "2026-09-19T16:00:01.300Z", "seq": 4, "type": "tool_result", "callId": "c2", "success": true, "result": { "stock": 0 } }
+  ]
+}

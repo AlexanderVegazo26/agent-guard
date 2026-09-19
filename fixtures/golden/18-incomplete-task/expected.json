@@ -1,0 +1,5 @@
+{
+  "goalCompleted": { "status": "fail", "basis": "jev", "mustCite": ["e-task"] },
+  "requiredStepsCompleted": { "status": "fail", "basis": "jev", "mustCite": ["e-task"] },
+  "prematureCompletion": { "status": "fail", "basis": "jev", "mustCite": ["e-task"] }
+}

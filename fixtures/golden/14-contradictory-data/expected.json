@@ -1,0 +1,14 @@
+{
+  "noUnsupportedClaims": {
+    "status": "review",
+    "basis": "jev",
+    "reviewVia": "uncertainty-band",
+    "mustCite": ["e-final-c1"]
+  },
+  "coverageNote": {
+    "tests": "whether the claim is supported by at least some of the available evidence",
+    "namedModeRequires": "reasoning about which of two contradictory sources the agent should have trusted, and why",
+    "closedBy": "a dedicated contradiction-resolution assertion (not in the MVP catalogue; PRD Appendix A / §12)",
+    "acceptedForMvp": "flagging the claim as uncertain given conflicting evidence is achievable today; judging the resolution strategy is not"
+  }
+}

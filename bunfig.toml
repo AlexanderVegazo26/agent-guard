@@ -1,0 +1,6 @@
+[install]
+# Bun installs dependencies and runs tasks only. Node 26 executes every line
+# of AgentGuard's own code (TRD §2.1.1) — `bun test` is never used here.
+exact = false
+
+[install.scopes]

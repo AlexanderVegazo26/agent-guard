@@ -1,0 +1,7 @@
+{
+  "noUnsupportedClaims": {
+    "status": "fail",
+    "basis": "jev",
+    "mustCite": ["e-final-c1", "e-final-c2"]
+  }
+}

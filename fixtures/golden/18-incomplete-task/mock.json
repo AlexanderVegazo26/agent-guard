@@ -1,0 +1,5 @@
+{
+  "goalCompleted": { "type": "noul", "noul": 0.05 },
+  "requiredStepsCompleted": { "type": "noul", "noul": 0.05 },
+  "prematureCompletion": { "type": "noul", "noul": 0.9 }
+}

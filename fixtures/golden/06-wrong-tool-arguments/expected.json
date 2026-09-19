@@ -1,0 +1,4 @@
+{
+  "toolWasAppropriate": { "status": "fail", "basis": "jev", "mustCite": ["e-ev-1"] },
+  "toolArgumentsCorrect": { "status": "fail", "basis": "jev", "mustCite": ["e-ev-1"] }
+}

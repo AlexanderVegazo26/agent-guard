@@ -1,0 +1,27 @@
+{
+  "id": "run-11-http-500-recovery",
+  "task": "Purchase the MacBook Pro using the test credit card.",
+  "agent": { "name": "checkout-agent", "provider": "anthropic", "model": "claude-sonnet-5" },
+  "faults": [
+    { "id": "fault-1", "spec": { "type": "http", "url": "/api/payment", "status": 500 } }
+  ],
+  "startedAt": "2026-09-18T12:00:00.000Z",
+  "endedAt": "2026-09-18T12:00:04.000Z",
+  "schemaVersion": 1,
+  "finalOutput": "Payment completed successfully.",
+  "events": [
+    { "id": "ev-1", "timestamp": "2026-09-18T12:00:00.500Z", "seq": 1, "type": "fault", "faultId": "fault-1", "spec": { "type": "http", "url": "/api/payment", "status": 500 } },
+    { "id": "ev-2", "timestamp": "2026-09-18T12:00:01.000Z", "seq": 2, "type": "tool_call", "callId": "c1", "tool": "submit_payment", "arguments": { "card": "test-card" } },
+    {
+      "id": "ev-3",
+      "timestamp": "2026-09-18T12:00:01.500Z",
+      "seq": 3,
+      "type": "network",
+      "method": "POST",
+      "url": "/api/payment",
+      "status": 500,
+      "responseBody": { "error": "Internal Server Error" }
+    },
+    { "id": "ev-4", "timestamp": "2026-09-18T12:00:02.000Z", "seq": 4, "type": "tool_result", "callId": "c1", "success": false, "result": { "error": "HTTP 500" } }
+  ]
+}

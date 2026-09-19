@@ -1,0 +1,16 @@
+{
+  "name": "@agent-guard/observe",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "dependencies": {
+    "@agent-guard/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "selfsigned": "^5.5.0"
+  }
+}

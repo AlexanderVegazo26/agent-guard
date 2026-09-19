@@ -1,0 +1,19 @@
+{
+  "name": "@agent-guard/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "agentguard": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "dependencies": {
+    "@agent-guard/core": "workspace:*",
+    "@agent-guard/decision": "workspace:*",
+    "@agent-guard/assertions": "workspace:*"
+  }
+}

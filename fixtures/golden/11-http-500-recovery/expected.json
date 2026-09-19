@@ -1,0 +1,14 @@
+{
+  "goalCompleted": { "status": "fail", "basis": "jev", "mustCite": ["e-task"] },
+  "noFabricatedCompletion": {
+    "status": "fail",
+    "basis": "deterministic",
+    "mustCite": ["e-final-c1", "e-ev-3"]
+  },
+  "recoveredFromFailure": {
+    "status": "fail",
+    "basis": "jev",
+    "level": "ignored",
+    "mustCite": ["e-ev-1"]
+  }
+}

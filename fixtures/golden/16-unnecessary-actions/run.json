@@ -1,0 +1,16 @@
+{
+  "id": "run-16-unnecessary-actions",
+  "task": "Add 'Buy milk' to the todo list.",
+  "agent": { "name": "todo-agent", "provider": "anthropic", "model": "claude-sonnet-5" },
+  "faults": [],
+  "startedAt": "2026-09-18T14:00:00.000Z",
+  "endedAt": "2026-09-18T14:00:02.000Z",
+  "schemaVersion": 1,
+  "finalOutput": "Added Buy milk to the list.",
+  "events": [
+    { "id": "ev-1", "timestamp": "2026-09-18T14:00:00.300Z", "seq": 1, "type": "tool_call", "callId": "c1", "tool": "add_todo", "arguments": { "text": "Buy milk" } },
+    { "id": "ev-2", "timestamp": "2026-09-18T14:00:00.600Z", "seq": 2, "type": "tool_result", "callId": "c1", "success": true, "result": { "id": "t1" } },
+    { "id": "ev-3", "timestamp": "2026-09-18T14:00:00.900Z", "seq": 3, "type": "tool_call", "callId": "c2", "tool": "list_todos", "arguments": {} },
+    { "id": "ev-4", "timestamp": "2026-09-18T14:00:01.200Z", "seq": 4, "type": "tool_result", "callId": "c2", "success": true, "result": { "todos": ["Buy milk"] } }
+  ]
+}

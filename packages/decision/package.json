@@ -1,0 +1,14 @@
+{
+  "name": "@agent-guard/decision",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "dependencies": {
+    "@typesafe-ai/sdk": "0.6.x"
+  }
+}
