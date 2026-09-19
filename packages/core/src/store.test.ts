@@ -98,6 +98,24 @@ describe("FilesystemRunStore", () => {
     expect(lines).toEqual([{ id: "ev-1", type: "tool_call" }, { id: "ev-2", type: "tool_result" }]);
   });
 
+  it("PRD2 review fix: many concurrent appendEvent calls lose no lines (was read-modify-write, now a true append)", async () => {
+    const n = 50;
+    await Promise.all(
+      Array.from({ length: n }, (_, i) => store.appendEvent(RUN, { id: `ev-${i}` })),
+    );
+
+    const filePath = path.join(root, "runs", "2026-09-20", "run-store-test", "events.jsonl");
+    const { readFile } = await import("node:fs/promises");
+    const contents = await readFile(filePath, "utf8");
+    const lines = contents.trim().split("\n").filter((l) => l.length > 0);
+
+    // Every call's line survived — the old read-then-rewrite implementation
+    // could lose writes when two calls raced on the same "existing content".
+    expect(lines).toHaveLength(n);
+    const ids = new Set(lines.map((l) => (JSON.parse(l) as { id: string }).id));
+    expect(ids.size).toBe(n);
+  });
+
   it("listRunIds finds runs across multiple date directories", async () => {
     await store.saveRun(RUN);
     await store.saveRun({ ...RUN, id: "run-store-test-2", startedAt: "2026-09-21T00:00:00.000Z" });

@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DefaultRedactor, type Redactor } from "./redaction.js";
 import type { AgentRun, AssertionResult, Evidence, EvidenceLink } from "./schema.js";
@@ -57,14 +57,24 @@ export class FilesystemRunStore {
     return null;
   }
 
-  /** Appends one event line to `events.jsonl`, so a crashed run still yields partial evidence (§10.1). */
+  /**
+   * Appends one event line to `events.jsonl`, so a crashed run still yields
+   * partial evidence (§10.1). PRD2 review finding: this used to read the
+   * whole file and rewrite it on every call — quadratic in the number of
+   * events, and two concurrent `appendEvent` calls could race (both read
+   * the same "existing" contents, one write clobbers the other). A true
+   * `appendFile` is O(1) per call and atomic at the OS level for a single
+   * write — Node still doesn't serialize multiple in-flight `appendFile`
+   * calls to the same path against each other, so concurrent *callers*
+   * still need their own sequencing if that matters to them, but this at
+   * least stops the store itself from being the source of the race.
+   */
   async appendEvent(run: Pick<AgentRun, "id" | "startedAt">, event: unknown): Promise<void> {
     const dir = path.join(this.runsRoot(), run.startedAt.slice(0, 10), run.id);
     await mkdir(dir, { recursive: true });
     const line = `${JSON.stringify(event)}\n`;
     const filePath = path.join(dir, "events.jsonl");
-    const existing = existsSync(filePath) ? await readFile(filePath, "utf8") : "";
-    await writeFile(filePath, existing + line, "utf8");
+    await appendFile(filePath, line, "utf8");
   }
 
   async saveRun(run: AgentRun): Promise<string> {
