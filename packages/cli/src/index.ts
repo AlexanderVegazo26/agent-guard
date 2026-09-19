@@ -12,6 +12,7 @@ import { runCompareCommand } from "./commands/compare.js";
 import { runWatchCommand } from "./commands/watch.js";
 import { runAutofixProposeCommand, runAutofixShowCommand } from "./commands/autofix.js";
 import { runReviewListCommand, runReviewRecordCommand } from "./commands/review.js";
+import { runExportCommand, runVerifyPackCommand } from "./commands/exportPack.js";
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
@@ -167,6 +168,29 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "export") {
+    const runId = rest.find((a) => !a.startsWith("--"));
+    const outDir = flagValue(rest, "--out");
+    if (!runId || !outDir) {
+      console.error("agentguard export: <run-id> --out <dir> are required, e.g. `agentguard export run-01 --out ./pack`");
+      process.exitCode = 1;
+      return;
+    }
+    process.exitCode = await runExportCommand({ runId, outDir, storeRoot: flagValue(rest, "--store") });
+    return;
+  }
+
+  if (command === "verify-pack") {
+    const packDir = rest.find((a) => !a.startsWith("--"));
+    if (!packDir) {
+      console.error("agentguard verify-pack: <pack-dir> is required, e.g. `agentguard verify-pack ./pack`");
+      process.exitCode = 1;
+      return;
+    }
+    process.exitCode = await runVerifyPackCommand({ packDir });
+    return;
+  }
+
   if (command === "compare") {
     const [beforeId, afterId] = rest.filter((a) => !a.startsWith("--"));
     if (!beforeId || !afterId) {
@@ -222,6 +246,8 @@ function printHelp(): void {
       "  compare <before-run-id> <after-run-id> [--store <dir>]  Diff two stored runs' verdicts (exit 1 on any regression)",
       "  review list [--store <dir>]                   List open REVIEW verdicts across the store with no adjudication yet",
       "  review record <run-id> <assertion-id> <pass|fail|cannot-tell> --reason <text> [--by <name>] [--store <dir>]   Record a human verdict",
+      "  export <run-id> --out <dir> [--store <dir>]   Export a tamper-evident copy of a run (SHA-256 manifest)",
+      "  verify-pack <pack-dir>                         Recompute and check an exported pack's manifest",
       "  watch [--task <text>] [--config <path>] --transcript <file> | -- <command> [args...]   Zero-setup, no API key: point at any agent",
       "  autofix propose --agent-md <path> --runs <id1,id2,...> [--store <dir>]   Propose a diff for a recurring finding (never applies it)",
       "  autofix show <fix-id> [--store <dir>]         Print a proposed fix's diff/rationale (always labeled not validated)",

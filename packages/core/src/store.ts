@@ -45,6 +45,11 @@ export class FilesystemRunStore {
     return run.startedAt.slice(0, 10); // YYYY-MM-DD
   }
 
+  /** PRD2 F4 — the on-disk directory for a run, for callers (e.g. `agentguard export`) that need the real path rather than going through a `load*` method. */
+  async runDirectory(runId: string): Promise<string | null> {
+    return this.runDirFor(runId);
+  }
+
   private async runDirFor(runId: string): Promise<string | null> {
     const runsRoot = this.runsRoot();
     if (!existsSync(runsRoot)) return null;

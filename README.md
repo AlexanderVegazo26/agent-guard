@@ -167,6 +167,8 @@ agentguard report [--store <dir>]                            Write json/junit/ht
 agentguard compare <before-run-id> <after-run-id>            Diff two stored runs' verdicts (exit 1 on any regression)
 agentguard review list [--store <dir>]                       List open REVIEW verdicts nobody has adjudicated yet
 agentguard review record <run-id> <assertion> <pass|fail|cannot-tell> --reason <text>   Record a human verdict
+agentguard export <run-id> --out <dir>                       Export a tamper-evident copy of a run (SHA-256 manifest)
+agentguard verify-pack <pack-dir>                            Recompute and check an exported pack's manifest
 agentguard autofix propose --agent-md <path> --runs <ids>    Propose a diff for a recurring finding (never applies it)
 agentguard autofix show <fix-id>                             Print a proposed fix's diff/rationale (always "NOT VALIDATED")
 ```
