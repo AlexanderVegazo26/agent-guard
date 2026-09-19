@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { choiceVerdict, noulVerdict, scoreVerdict } from "./verdict.js";
+import { choiceVerdict, noulConfidence, noulVerdict, scoreVerdict } from "./verdict.js";
 
 const BAND: [number, number] = [0.35, 0.75];
 
@@ -28,6 +28,26 @@ describe("noulVerdict — polarity, hand-computed", () => {
       expect(noulVerdict(probability, polarity, BAND)).toBe(expected);
     });
   }
+});
+
+describe("noulConfidence — PRD2 G9/G10: confidence-in-verdict, not raw probability", () => {
+  it("is polarity-invariant: computing from p or from 1-p gives the same number", () => {
+    expect(noulConfidence(0.05)).toBeCloseTo(0.95, 10);
+    expect(noulConfidence(0.95)).toBeCloseTo(0.95, 10);
+  });
+
+  it("a low raw probability on a negative-polarity assertion is a HIGH confidence, not a low one", () => {
+    // noFabricatedCompletion at p=0.05: 95% sure the violation did NOT
+    // happen — a confident PASS. The raw probability (0.05) would wrongly
+    // bin this as a near-zero-confidence result.
+    const band: [number, number] = [0.35, 0.75];
+    expect(noulVerdict(0.05, "negative", band)).toBe("pass");
+    expect(noulConfidence(0.05)).toBeCloseTo(0.95, 10);
+  });
+
+  it("the exact midpoint (maximum genuine uncertainty) has the lowest possible confidence", () => {
+    expect(noulConfidence(0.5)).toBe(0.5);
+  });
 });
 
 describe("scoreVerdict — the one-sided review band (TRD §6.2.1 example)", () => {

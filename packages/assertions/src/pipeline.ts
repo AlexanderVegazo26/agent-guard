@@ -13,7 +13,7 @@ import { priorityOrder } from "./priority.js";
 import { checkEvidenceSufficiency, REQUIREMENTS, type SufficiencyResult } from "./requirements.js";
 import { selectEvidenceForAssertion } from "./selection.js";
 import { buildUnionState } from "./state.js";
-import { noulVerdict, scoreVerdict } from "./verdict.js";
+import { noulConfidence, noulVerdict, scoreVerdict } from "./verdict.js";
 
 /**
  * §6 — the pipeline that turns an evidence graph into `AssertionResult`s.
@@ -314,7 +314,18 @@ function interpretSingle(
     const band = perAssertionBand(id, policy);
     const status = noulVerdict(answer.noul, polarity ?? "positive", band);
     return withReviewVia(
-      { id, status, basis: "jev", signal: "noul-probability", confidence: answer.noul, evidence: evidenceIds, durationMs },
+      {
+        id,
+        status,
+        basis: "jev",
+        signal: "noul-probability",
+        // PRD2 G9: the raw probability, not confidence-in-verdict — see
+        // `noulConfidence`'s doc comment for why those are different
+        // numbers and why calibration needs the latter.
+        confidence: noulConfidence(answer.noul),
+        evidence: evidenceIds,
+        durationMs,
+      },
       status,
     );
   }
@@ -383,12 +394,20 @@ function aggregateFanOut(
   // result (same as a single-question assertion). Rather than inventing a
   // number, this picks the actual engine answer that was the weakest link
   // in the aggregate's own verdict — the one a human would look at first
-  // to decide whether to trust it: for Noul (raw violation probability,
-  // always negative-polarity across today's fan-outs), the MAX probability
-  // across items is simultaneously "the strongest evidence for fail" and
-  // "the closest call away from fail" for a pass — the same number either
-  // way. For Choice, MIN confidence is the batch's weakest-confidence item.
-  const noulProbabilities: number[] = [];
+  // to decide whether to trust it.
+  //
+  // PRD2 G10 fix: this used to push the *raw* probability and take its
+  // MAX, on the documented assumption that every Noul fan-out is
+  // negative-polarity. That assumption was wrong — `toolArgumentsCorrect`
+  // and `toolResultUsedCorrectly` are positive-polarity fan-outs — and the
+  // raw-probability MAX is also just the wrong statistic even where the
+  // assumption held (see `noulConfidence`'s doc comment: a low raw
+  // probability can be a highly *confident* verdict). Each item's
+  // confidence-in-its-own-verdict is `noulConfidence(p)`
+  // (polarity-invariant), and the aggregate's confidence is the MIN across
+  // items — the least confident individual judgment in the batch. For
+  // Choice, MIN confidence is the batch's weakest-confidence item, as before.
+  const noulConfidences: number[] = [];
   const choiceConfidences: number[] = [];
 
   for (const item of included) {
@@ -398,7 +417,7 @@ function aggregateFanOut(
     cited.add(item.id);
 
     if (def.primitive === "noul" && answer.type === "noul") {
-      noulProbabilities.push(answer.noul);
+      noulConfidences.push(noulConfidence(answer.noul));
       const band = perAssertionBand(id, policy);
       const status = noulVerdict(answer.noul, def.polarity ?? "negative", band);
       if (status === "fail") {
@@ -438,8 +457,8 @@ function aggregateFanOut(
   const status: AssertionStatus = anyFail ? "fail" : coverageGaps ? "review" : anyReview ? "review" : "pass";
 
   const confidence =
-    noulProbabilities.length > 0
-      ? Math.max(...noulProbabilities)
+    noulConfidences.length > 0
+      ? Math.min(...noulConfidences)
       : choiceConfidences.length > 0
         ? Math.min(...choiceConfidences)
         : undefined;

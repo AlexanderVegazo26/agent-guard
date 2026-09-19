@@ -34,6 +34,29 @@ export function noulVerdict(probability: number, polarity: Polarity, band: [numb
 }
 
 /**
+ * PRD2 G9/G10 fix — a raw Noul probability is "how likely the *statement*
+ * is true," never "how confident we are in the *verdict*." Those coincide
+ * for a positive-polarity assertion at a high probability, but invert for
+ * a negative-polarity one: `noFabricatedCompletion` at p=0.05 is a highly
+ * confident PASS (95% sure the violation did NOT happen), yet the raw
+ * probability (0.05) makes it look like a low-confidence result if binned
+ * or aggregated directly.
+ *
+ * This is the polarity-invariant fix: `max(p, 1-p)` is "how far the
+ * probability sits from the uncertain midpoint," which is exactly
+ * "confidence in whichever way the decision landed" — and it is the same
+ * value whether you compute it from `p` or from `1-p`, so it needs no
+ * polarity argument at all. Used both to populate a single-question
+ * result's `confidence` field (was previously the raw probability,
+ * unconditionally — TRD §6.9's calibration curve is unusable without
+ * this) and, per fan-out item, to pick the fan-out's own weakest-link
+ * aggregate confidence (`aggregateFanOut` in pipeline.ts).
+ */
+export function noulConfidence(probability: number): number {
+  return Math.max(probability, 1 - probability);
+}
+
+/**
  * Score → a declared pass level, read as an interval (TRD §6.2.1):
  *   score ≥ passIndex                              → PASS
  *   passIndex - reviewBelow ≤ score < passIndex     → REVIEW  (one-sided!)
