@@ -378,6 +378,18 @@ function aggregateFanOut(
   }
 
   let anyReview = false;
+  // §6.9 calibration gap fix: an aggregate over N items has no single
+  // engine-reported confidence, but calibration needs one scalar per
+  // result (same as a single-question assertion). Rather than inventing a
+  // number, this picks the actual engine answer that was the weakest link
+  // in the aggregate's own verdict — the one a human would look at first
+  // to decide whether to trust it: for Noul (raw violation probability,
+  // always negative-polarity across today's fan-outs), the MAX probability
+  // across items is simultaneously "the strongest evidence for fail" and
+  // "the closest call away from fail" for a pass — the same number either
+  // way. For Choice, MIN confidence is the batch's weakest-confidence item.
+  const noulProbabilities: number[] = [];
+  const choiceConfidences: number[] = [];
 
   for (const item of included) {
     const key = `${id}::${item.id}`;
@@ -386,6 +398,7 @@ function aggregateFanOut(
     cited.add(item.id);
 
     if (def.primitive === "noul" && answer.type === "noul") {
+      noulProbabilities.push(answer.noul);
       const band = perAssertionBand(id, policy);
       const status = noulVerdict(answer.noul, def.polarity ?? "negative", band);
       if (status === "fail") {
@@ -398,6 +411,7 @@ function aggregateFanOut(
     }
 
     if (def.primitive === "choice" && answer.type === "choice") {
+      choiceConfidences.push(answer.confidence);
       const choicePolicy = policy.perAssertion.toolWasAppropriate;
       if (answer.confidence < choicePolicy.minConfidence) {
         anyReview = true;
@@ -423,11 +437,19 @@ function aggregateFanOut(
   // over an incomplete sample is never a clean pass.
   const status: AssertionStatus = anyFail ? "fail" : coverageGaps ? "review" : anyReview ? "review" : "pass";
 
+  const confidence =
+    noulProbabilities.length > 0
+      ? Math.max(...noulProbabilities)
+      : choiceConfidences.length > 0
+        ? Math.min(...choiceConfidences)
+        : undefined;
+
   return {
     id,
     status,
     basis,
     signal: def.primitive === "noul" ? "noul-probability" : "derived-confidence",
+    confidence,
     evidence: [...cited],
     coverageGaps,
     explanation: notes.length > 0 ? notes.join("; ") : `${cited.size} item(s) checked`,
