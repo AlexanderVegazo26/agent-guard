@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { FilesystemRunStore } from "@agent-guard/core";
 import { formatHtml } from "../reporters/html.js";
-import { formatJson } from "../reporters/json.js";
+import { formatJson, type JsonReportRun } from "../reporters/json.js";
 import { formatJunit } from "../reporters/junit.js";
 
 export interface ReportCommandOptions {
@@ -25,19 +25,26 @@ export async function runReportCommand(options: ReportCommandOptions): Promise<n
     return 3;
   }
 
-  const runs: Record<string, Awaited<ReturnType<typeof store.loadDecisions>>> = {};
+  const decisionsByRun: Record<string, Awaited<ReturnType<typeof store.loadDecisions>>> = {};
+  const jsonRuns: Record<string, JsonReportRun> = {};
   for (const runId of runIds) {
-    runs[runId] = await store.loadDecisions(runId);
+    const decisions = await store.loadDecisions(runId);
+    decisionsByRun[runId] = decisions;
+    if (!decisions) continue;
+    // PRD2 F1: an adjudication rides alongside its run's decisions in the
+    // JSON report, never merged into decisions.json itself.
+    const adjudications = await store.loadAdjudications(runId);
+    jsonRuns[runId] = adjudications ? { decisions, adjudications } : { decisions };
   }
   const nonNullRuns = Object.fromEntries(
-    Object.entries(runs).filter(([, v]) => v !== null),
-  ) as Record<string, NonNullable<(typeof runs)[string]>>;
+    Object.entries(decisionsByRun).filter(([, v]) => v !== null),
+  ) as Record<string, NonNullable<(typeof decisionsByRun)[string]>>;
 
   const reportsDir = path.join(root, "reports");
   await mkdir(reportsDir, { recursive: true });
 
   const jsonPath = path.join(reportsDir, "report.json");
-  await writeFile(jsonPath, formatJson(nonNullRuns), "utf8");
+  await writeFile(jsonPath, formatJson(jsonRuns), "utf8");
   console.log(`  wrote ${jsonPath}`);
 
   const junitPath = path.join(reportsDir, "junit.xml");
