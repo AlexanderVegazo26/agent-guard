@@ -31,7 +31,21 @@ export interface CapturedToolResult {
   result: unknown;
 }
 
-export type CapturedEvent = CapturedToolCall | CapturedToolResult;
+/**
+ * PRD2 F3 — a tool's own definition, captured from an MCP `tools/list`
+ * response. This is the evidence source a description-based prompt
+ * injection (an instruction hidden in the description text the agent
+ * reads, not in page content) needs — invisible to `tool_call`/
+ * `tool_result` capture, which only ever sees the tool being *used*.
+ */
+export interface CapturedToolDefinition {
+  kind: "tool_definition";
+  tool: string;
+  description?: string;
+  inputSchema?: unknown;
+}
+
+export type CapturedEvent = CapturedToolCall | CapturedToolResult | CapturedToolDefinition;
 export type EventSink = (event: CapturedEvent) => void;
 
 interface ToolCallRequest {
@@ -41,6 +55,12 @@ interface ToolCallRequest {
   params: { name: string; arguments?: unknown };
 }
 
+interface ToolsListRequest {
+  jsonrpc: "2.0";
+  id: string | number;
+  method: "tools/list";
+}
+
 function isToolCallRequest(message: JSONRPCMessage): message is ToolCallRequest {
   return (
     "method" in message &&
@@ -48,6 +68,10 @@ function isToolCallRequest(message: JSONRPCMessage): message is ToolCallRequest 
     "id" in message &&
     "params" in message
   );
+}
+
+function isToolsListRequest(message: JSONRPCMessage): message is ToolsListRequest {
+  return "method" in message && (message as { method?: unknown }).method === "tools/list" && "id" in message;
 }
 
 function isResponseLike(message: JSONRPCMessage): boolean {
@@ -63,6 +87,7 @@ function isResponseLike(message: JSONRPCMessage): boolean {
  */
 export class ObservingTransport implements Transport {
   private readonly pendingCalls = new Map<string, { tool: string; arguments: unknown }>();
+  private readonly pendingListRequests = new Set<string>();
 
   onclose?: () => void;
   onerror?: (error: Error) => void;
@@ -102,6 +127,10 @@ export class ObservingTransport implements Transport {
   }
 
   private observeOutbound(message: JSONRPCMessage): void {
+    if (isToolsListRequest(message)) {
+      this.pendingListRequests.add(String(message.id));
+      return;
+    }
     if (!isToolCallRequest(message)) return;
     const callId = String(message.id);
     this.pendingCalls.set(callId, { tool: message.params.name, arguments: message.params.arguments });
@@ -111,7 +140,15 @@ export class ObservingTransport implements Transport {
   private observeInbound(message: JSONRPCMessage): void {
     if (!isResponseLike(message)) return;
     const response = message as { id: string | number; result?: unknown; error?: unknown };
-    const callId = String(response.id);
+    const responseId = String(response.id);
+
+    if (this.pendingListRequests.has(responseId)) {
+      this.pendingListRequests.delete(responseId);
+      this.observeToolsListResponse(response.result);
+      return;
+    }
+
+    const callId = responseId;
     const call = this.pendingCalls.get(callId);
     if (!call) return; // a response to something other than a tool call we're tracking
     this.pendingCalls.delete(callId);
@@ -123,5 +160,28 @@ export class ObservingTransport implements Transport {
     const toolExecutionError = (response.result as { isError?: boolean } | undefined)?.isError === true;
     const isError = jsonRpcError || toolExecutionError;
     this.sink({ kind: "tool_result", callId, success: !isError, result: isError ? (response.error ?? response.result) : response.result });
+  }
+
+  /**
+   * PRD2 F3 — a `tools/list` response's shape (verified against the SDK's
+   * own `ListToolsResultSchema`): `{ tools: [{ name, description?,
+   * inputSchema }] }`. Emits one `tool_definition` per tool. Malformed or
+   * unexpected shapes are ignored rather than thrown — this is passive
+   * observation (TRD §4.2), never a reason to break the agent's own
+   * traffic.
+   */
+  private observeToolsListResponse(result: unknown): void {
+    const tools = (result as { tools?: unknown } | undefined)?.tools;
+    if (!Array.isArray(tools)) return;
+    for (const tool of tools) {
+      if (tool === null || typeof tool !== "object" || typeof (tool as { name?: unknown }).name !== "string") continue;
+      const { name, description, inputSchema } = tool as { name: string; description?: unknown; inputSchema?: unknown };
+      this.sink({
+        kind: "tool_definition",
+        tool: name,
+        description: typeof description === "string" ? description : undefined,
+        inputSchema,
+      });
+    }
   }
 }

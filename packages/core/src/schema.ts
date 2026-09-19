@@ -112,6 +112,21 @@ export const FaultEvent = BaseEvent.extend({
   spec: FaultSpec,
 });
 
+// PRD2 F3 — a tool's own definition (name, description, input schema) as
+// the agent saw it, captured at the moment it was first exposed (e.g. an
+// MCP `tools/list` response). This is the evidence source ASI01/ASI04's
+// dominant 2026 attack shape needs: an instruction hidden in a tool's
+// *description*, which the agent reads but the user never sees, is
+// invisible without recording the definition itself as evidence — a
+// `tool_call`/`tool_result` pair only shows the tool being used, never
+// what it claimed to be.
+export const ToolDefinitionEvent = BaseEvent.extend({
+  type: z.literal("tool_definition"),
+  tool: z.string(),
+  description: z.string().optional(),
+  inputSchema: z.unknown().optional(),
+});
+
 export const AgentEvent = z.discriminatedUnion("type", [
   MessageEvent,
   ToolCallEvent,
@@ -120,6 +135,7 @@ export const AgentEvent = z.discriminatedUnion("type", [
   BrowserEvent,
   StateEvent,
   FaultEvent,
+  ToolDefinitionEvent,
 ]);
 export type AgentEvent = z.infer<typeof AgentEvent>;
 
@@ -149,6 +165,7 @@ export const EvidenceType = z.enum([
   "network",
   "state_change",
   "injected_fault",
+  "tool_definition",
 ]);
 export type EvidenceType = z.infer<typeof EvidenceType>;
 

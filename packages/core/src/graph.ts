@@ -135,6 +135,15 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
           }),
         );
         break;
+      case "tool_definition":
+        items.push(
+          makeEvidence(`e-${event.id}`, "tool_definition", event, {
+            tool: event.tool,
+            description: event.description,
+            inputSchema: event.inputSchema,
+          }),
+        );
+        break;
     }
   }
 

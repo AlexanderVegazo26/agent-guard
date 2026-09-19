@@ -53,7 +53,8 @@ type EventDraft =
       bodyTruncated?: boolean;
       error?: string;
     }
-  | { type: "fault"; faultId: string; spec: FaultSpec };
+  | { type: "fault"; faultId: string; spec: FaultSpec }
+  | { type: "tool_definition"; tool: string; description?: string; inputSchema?: unknown };
 
 /**
  * PRD §9.1 — the `agentguard` test fixture. `observe()` wraps the agent's
@@ -184,6 +185,10 @@ export class AgentGuardFixture {
   private recordCaptured(event: CapturedEvent): void {
     if (event.kind === "tool_call") {
       this.push({ type: "tool_call", callId: event.callId, tool: event.tool, arguments: event.arguments });
+      return;
+    }
+    if (event.kind === "tool_definition") {
+      this.push({ type: "tool_definition", tool: event.tool, description: event.description, inputSchema: event.inputSchema });
       return;
     }
     // The network call the tool made has very likely already completed —
