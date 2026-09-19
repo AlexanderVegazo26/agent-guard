@@ -8,3 +8,4 @@ export * from "./priority.js";
 export * from "./selection.js";
 export * from "./pipeline.js";
 export * from "./escalate.js";
+export * from "./codingVertical.js";

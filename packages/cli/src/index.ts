@@ -14,6 +14,7 @@ import { runAutofixProposeCommand, runAutofixShowCommand } from "./commands/auto
 import { runReviewListCommand, runReviewRecordCommand } from "./commands/review.js";
 import { runExportCommand, runVerifyPackCommand } from "./commands/exportPack.js";
 import { runHistoryCommand } from "./commands/history.js";
+import { runReviewPrCommand } from "./commands/reviewPr.js";
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
@@ -181,6 +182,23 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "review-pr") {
+    const base = flagValue(rest, "--base");
+    const head = flagValue(rest, "--head");
+    if (!base || !head) {
+      console.error("agentguard review-pr: --base <ref> and --head <ref> are required, e.g. `agentguard review-pr --base main --head HEAD`");
+      process.exitCode = 1;
+      return;
+    }
+    process.exitCode = await runReviewPrCommand({
+      base,
+      head,
+      description: flagValue(rest, "--description"),
+      testResultsPath: flagValue(rest, "--test-results"),
+    });
+    return;
+  }
+
   if (command === "history") {
     const assertionId = flagValue(rest, "--assertion");
     if (!assertionId) {
@@ -265,6 +283,7 @@ function printHelp(): void {
       "  export <run-id> --out <dir> [--store <dir>]   Export a tamper-evident copy of a run (SHA-256 manifest)",
       "  verify-pack <pack-dir>                         Recompute and check an exported pack's manifest",
       "  history --assertion <id> [--baseline <run-id>] [--store <dir>]   Per-assertion verdict series across stored runs",
+      "  review-pr --base <ref> --head <ref> [--description <text>] [--test-results <path>]   Deterministic coding-agent checks against a real git diff",
       "  watch [--task <text>] [--config <path>] --transcript <file> | -- <command> [args...]   Zero-setup, no API key: point at any agent",
       "  autofix propose --agent-md <path> --runs <id1,id2,...> [--store <dir>]   Propose a diff for a recurring finding (never applies it)",
       "  autofix show <fix-id> [--store <dir>]         Print a proposed fix's diff/rationale (always labeled not validated)",
