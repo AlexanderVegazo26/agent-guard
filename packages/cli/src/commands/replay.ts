@@ -5,6 +5,7 @@ import {
   formatConsole,
   languageAdvisory,
   loadPolicyConfig,
+  runSourceAdvisory,
   type AssertionId,
 } from "@agent-guard/core";
 import { escalateReviews, evaluate } from "@agent-guard/assertions";
@@ -67,6 +68,8 @@ export async function runReplayCommand(options: ReplayCommandOptions): Promise<n
   console.log(formatConsole(options.runId, results));
   const advisory = languageAdvisory(graph);
   if (advisory) console.log(`\n  ${advisory}`);
+  const sourceAdvisory = runSourceAdvisory(run);
+  if (sourceAdvisory) console.log(`\n  ${sourceAdvisory}`);
   await store.saveDecisions(options.runId, results);
 
   return computeExitCode(results);

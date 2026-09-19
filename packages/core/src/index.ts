@@ -6,6 +6,7 @@ export * from "./redaction.js";
 export * from "./languageAdvisory.js";
 export * from "./evidencePack.js";
 export * from "./history.js";
+export * from "./runSourceAdvisory.js";
 export * from "./store.js";
 export * from "./calibration.js";
 export * from "./exitCode.js";

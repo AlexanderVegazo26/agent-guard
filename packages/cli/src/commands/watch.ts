@@ -9,6 +9,7 @@ import {
   formatConsole,
   languageAdvisory,
   loadPolicyConfig,
+  runSourceAdvisory,
   type AssertionId,
 } from "@agent-guard/core";
 import { evaluate } from "@agent-guard/assertions";
@@ -84,6 +85,8 @@ export async function runWatchCommand(options: WatchCommandOptions): Promise<num
   console.log(formatConsole(run.id, results));
   const advisory = languageAdvisory(graph);
   if (advisory) console.log(`\n  ${advisory}`);
+  const sourceAdvisory = runSourceAdvisory(run);
+  if (sourceAdvisory) console.log(`\n  ${sourceAdvisory}`);
   console.log(
     "\n  agentguard watch checks only what code can prove without a decision engine (PRD §7). For semantic checks\n  (did the agent choose the right tool, recover from a failure honestly, ...) run `agentguard test --live`\n  against a properly captured run.\n",
   );

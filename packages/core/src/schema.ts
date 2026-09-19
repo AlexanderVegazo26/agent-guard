@@ -139,6 +139,19 @@ export const AgentEvent = z.discriminatedUnion("type", [
 ]);
 export type AgentEvent = z.infer<typeof AgentEvent>;
 
+// PRD2 F5 — PRD v0.6 §9.2's three agent-attachment modes differ in how
+// trustworthy their own events are. "Wrap the tool layer" (the Playwright
+// fixture's MCP observation) and a real trace importer both *observe*
+// wire traffic — the agent cannot lie about a network response it never
+// controlled. "Agent emits" (TranscriptAdapter, `agentguard watch`) has
+// the agent's own harness *authoring* every event: a self-reported "no
+// network calls happened" is not evidence of no network calls, it's a
+// claim from the same party being evaluated. `source` records which kind
+// of run this is; omitted (the default) means observed, for backward
+// compatibility with every run persisted before this field existed.
+export const RunSource = z.enum(["observed", "self-reported"]);
+export type RunSource = z.infer<typeof RunSource>;
+
 export const AgentRun = z.object({
   id: z.string(),
   task: z.string(),
@@ -149,6 +162,7 @@ export const AgentRun = z.object({
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime().optional(),
   schemaVersion: z.literal(1),
+  source: RunSource.optional(),
 });
 export type AgentRun = z.infer<typeof AgentRun>;
 

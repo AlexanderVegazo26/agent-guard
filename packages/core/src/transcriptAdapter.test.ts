@@ -36,6 +36,15 @@ describe("TranscriptAdapter — generic, tool-agnostic", () => {
     expect(run.events.some((e) => e.type === "browser_state")).toBe(false);
   });
 
+  it("PRD2 F5: tags every run as source: \"self-reported\" — the caller authored these events, nothing was observed on the wire", async () => {
+    const adapter = new TranscriptAdapter("bash");
+    await adapter.start({ task: "Do a thing." });
+    adapter.captureCommand("ls");
+    adapter.captureOutput("ok");
+    const run = await adapter.stop();
+    expect(run.source).toBe("self-reported");
+  });
+
   it("marks a tool_result as failed via the text heuristic when no explicit success is given", async () => {
     const adapter = new TranscriptAdapter();
     await adapter.start({ task: "Run a command that fails." });

@@ -137,6 +137,11 @@ export class TranscriptAdapter {
       startedAt: this.startedAt,
       endedAt: new Date().toISOString(),
       schemaVersion: 1,
+      // PRD2 F5 — every event here came from the caller reporting a
+      // command/output pair, not from observing wire traffic directly.
+      // That is PRD v0.6 §9.2's "agent emits" mode, the least-trusted of
+      // the three attachment modes by design.
+      source: "self-reported",
     });
   }
 
