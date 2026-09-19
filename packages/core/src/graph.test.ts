@@ -73,6 +73,72 @@ describe("DefaultEvidenceCompiler — deterministic contradiction linker", () =>
   });
 });
 
+describe("DefaultEvidenceCompiler — multi-agent evidence (PRD2 F9)", () => {
+  it("compiles agent_spawn and agent_result events into their own evidence types", async () => {
+    const run = AgentRun.parse({
+      ...BASE,
+      task: "Research and summarize.",
+      events: [
+        { id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "agent_spawn", childAgentId: "sub-1", task: "Look up the current weather." },
+        { id: "ev-2", timestamp: "2026-09-20T00:00:00.200Z", seq: 2, type: "agent_result", childAgentId: "sub-1", success: true, claim: "The weather is sunny." },
+      ],
+    });
+    const graph = await new DefaultEvidenceCompiler().compile(run);
+
+    const spawn = graph.byType("agent_spawn");
+    expect(spawn).toHaveLength(1);
+    expect(spawn[0]!.content).toEqual({ parentAgentId: undefined, childAgentId: "sub-1", task: "Look up the current weather." });
+
+    const result = graph.byType("agent_result");
+    expect(result).toHaveLength(1);
+    expect(result[0]!.content).toEqual({ childAgentId: "sub-1", success: true, claim: "The weather is sunny." });
+  });
+
+  it("also compiles a sub-agent's claim as an ordinary agent_claim, tagged with its origin", async () => {
+    const run = AgentRun.parse({
+      ...BASE,
+      task: "Research and summarize.",
+      events: [
+        { id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "agent_result", childAgentId: "sub-1", success: true, claim: "The weather is sunny." },
+      ],
+    });
+    const graph = await new DefaultEvidenceCompiler().compile(run);
+
+    const claims = graph.byType("agent_claim");
+    expect(claims).toHaveLength(1);
+    expect(claims[0]!.content).toEqual({ text: "The weather is sunny.", agentId: "sub-1" });
+  });
+
+  it("does not fabricate a claim when agent_result carries none", async () => {
+    const run = AgentRun.parse({
+      ...BASE,
+      task: "Research and summarize.",
+      events: [
+        { id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "agent_result", childAgentId: "sub-1", success: false },
+      ],
+    });
+    const graph = await new DefaultEvidenceCompiler().compile(run);
+    expect(graph.byType("agent_claim")).toHaveLength(0);
+  });
+
+  it("a claim from the top-level agent (no agentId) and a sub-agent's tagged claim coexist and stay distinguishable", async () => {
+    const run = AgentRun.parse({
+      ...BASE,
+      task: "Research and summarize.",
+      finalOutput: "Summary complete.",
+      events: [
+        { id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "agent_result", childAgentId: "sub-1", success: true, claim: "The weather is sunny." },
+      ],
+    });
+    const graph = await new DefaultEvidenceCompiler().compile(run);
+    const claims = graph.byType("agent_claim");
+    const subAgentClaim = claims.find((c) => (c.content as { agentId?: string }).agentId === "sub-1");
+    const topLevelClaim = claims.find((c) => (c.content as { agentId?: string }).agentId === undefined);
+    expect(subAgentClaim).toBeDefined();
+    expect(topLevelClaim).toBeDefined();
+  });
+});
+
 describe("DefaultEvidenceCompiler — tool_definition evidence (PRD2 F3)", () => {
   it("compiles a tool_definition event into tool_definition evidence, carrying the description verbatim", async () => {
     const run = AgentRun.parse({

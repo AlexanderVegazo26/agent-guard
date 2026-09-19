@@ -144,6 +144,32 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
           }),
         );
         break;
+      case "agent_spawn":
+        items.push(
+          makeEvidence(`e-${event.id}`, "agent_spawn", event, {
+            parentAgentId: event.parentAgentId,
+            childAgentId: event.childAgentId,
+            task: event.task,
+          }),
+        );
+        break;
+      case "agent_result":
+        items.push(
+          makeEvidence(`e-${event.id}`, "agent_result", event, {
+            childAgentId: event.childAgentId,
+            success: event.success,
+            claim: event.claim,
+          }),
+        );
+        // The sub-agent's own claim is ALSO compiled as an ordinary
+        // agent_claim, tagged with its origin — an inter-agent
+        // noUnsupportedClaims (PRD2 F9, deferred) needs to check it the
+        // same way any other claim is checked, not read it only off the
+        // agent_result wrapper.
+        if (event.claim) {
+          items.push(...splitClaims(event.claim, event.id, event.timestamp, event.seq, "msg", event.childAgentId));
+        }
+        break;
     }
   }
 
@@ -179,6 +205,10 @@ function splitClaims(
   timestamp: string,
   seq: number,
   kind: "msg" | "final" = "msg",
+  // PRD2 F9 — when a claim originates from a named sub-agent (an
+  // `agent_result.claim`), it's tagged so "the agent said X" stays
+  // unambiguous once a run has more than one agent in it.
+  agentId?: string,
 ): Evidence[] {
   const sentences = text
     .split(/(?<=[.!?])\s+/)
@@ -189,7 +219,7 @@ function splitClaims(
     id: kind === "final" ? `e-final-c${i + 1}` : `e-${sourceId}-c${i + 1}`,
     type: "agent_claim" as const,
     source: kind === "final" ? "run.finalOutput" : sourceId,
-    content: { text: sentenceText },
+    content: agentId !== undefined ? { text: sentenceText, agentId } : { text: sentenceText },
     derivedFrom: [kind === "final" ? "run.finalOutput" : sourceId],
     timestamp,
     seq,

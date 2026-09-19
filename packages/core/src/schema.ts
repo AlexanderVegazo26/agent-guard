@@ -127,6 +127,28 @@ export const ToolDefinitionEvent = BaseEvent.extend({
   inputSchema: z.unknown().optional(),
 });
 
+// PRD2 F9 — a multi-agent run's sub-agent boundaries, as evidence rather
+// than as an assumption. Without recording *which* agent produced a
+// claim, "the agent said X" is ambiguous the moment there's more than
+// one agent in the run — a sub-agent's unverified claim, acted on by the
+// orchestrator as fact, is exactly the ASI08 (cascading agent failure)
+// shape, and it's invisible unless the boundary itself is captured.
+export const AgentSpawnEvent = BaseEvent.extend({
+  type: z.literal("agent_spawn"),
+  /** The orchestrating agent's own id, when known — omitted for a top-level spawn. */
+  parentAgentId: z.string().optional(),
+  childAgentId: z.string(),
+  task: z.string(),
+});
+
+export const AgentResultEvent = BaseEvent.extend({
+  type: z.literal("agent_result"),
+  childAgentId: z.string(),
+  success: z.boolean(),
+  /** The sub-agent's own final claim, verbatim — never paraphrased by the orchestrator (TRD §5.1's rule applies across the agent boundary too). */
+  claim: z.string().optional(),
+});
+
 export const AgentEvent = z.discriminatedUnion("type", [
   MessageEvent,
   ToolCallEvent,
@@ -136,6 +158,8 @@ export const AgentEvent = z.discriminatedUnion("type", [
   StateEvent,
   FaultEvent,
   ToolDefinitionEvent,
+  AgentSpawnEvent,
+  AgentResultEvent,
 ]);
 export type AgentEvent = z.infer<typeof AgentEvent>;
 
@@ -180,6 +204,8 @@ export const EvidenceType = z.enum([
   "state_change",
   "injected_fault",
   "tool_definition",
+  "agent_spawn",
+  "agent_result",
 ]);
 export type EvidenceType = z.infer<typeof EvidenceType>;
 
