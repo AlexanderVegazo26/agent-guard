@@ -9,6 +9,7 @@ import { runInitCommand } from "./commands/init.js";
 import { runReportCommand } from "./commands/report.js";
 import { runCompareCommand } from "./commands/compare.js";
 import { runWatchCommand } from "./commands/watch.js";
+import { runAutofixProposeCommand, runAutofixShowCommand } from "./commands/autofix.js";
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
@@ -86,6 +87,41 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "autofix") {
+    const [subcommand, ...subrest] = rest;
+
+    if (subcommand === "propose") {
+      const agentMdPath = flagValue(subrest, "--agent-md");
+      const runsFlag = flagValue(subrest, "--runs");
+      if (!agentMdPath || !runsFlag) {
+        console.error("agentguard autofix propose: --agent-md <path> and --runs <id1,id2,...> are required");
+        process.exitCode = 1;
+        return;
+      }
+      process.exitCode = await runAutofixProposeCommand({
+        agentMdPath,
+        runIds: runsFlag.split(","),
+        storeRoot: flagValue(subrest, "--store"),
+      });
+      return;
+    }
+
+    if (subcommand === "show") {
+      const fixId = subrest.find((a) => !a.startsWith("--"));
+      if (!fixId) {
+        console.error("agentguard autofix show: a fix id is required, e.g. `agentguard autofix show fix-...`");
+        process.exitCode = 1;
+        return;
+      }
+      process.exitCode = await runAutofixShowCommand({ fixId, storeRoot: flagValue(subrest, "--store") });
+      return;
+    }
+
+    console.error(`agentguard autofix: unknown subcommand "${subcommand}" — expected "propose" or "show"`);
+    process.exitCode = 1;
+    return;
+  }
+
   if (command === "compare") {
     const [beforeId, afterId] = rest.filter((a) => !a.startsWith("--"));
     if (!beforeId || !afterId) {
@@ -120,6 +156,8 @@ function printHelp(): void {
       "  report [--store <dir>]                        Write json/junit/html reports from every stored run's decisions",
       "  compare <before-run-id> <after-run-id> [--store <dir>]  Diff two stored runs' verdicts (exit 1 on any regression)",
       "  watch [--task <text>] --transcript <file> | -- <command> [args...]   Zero-setup, no API key: point at any agent",
+      "  autofix propose --agent-md <path> --runs <id1,id2,...> [--store <dir>]   Propose a diff for a recurring finding (never applies it)",
+      "  autofix show <fix-id> [--store <dir>]         Print a proposed fix's diff/rationale (always labeled not validated)",
     ].join("\n"),
   );
 }

@@ -9,6 +9,7 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
+    "@agent-guard/core": "workspace:*",
     "@typesafe-ai/sdk": "0.6.x"
   }
 }

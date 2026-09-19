@@ -45,6 +45,7 @@
       "name": "@agent-guard/decision",
       "version": "0.1.0",
       "dependencies": {
+        "@agent-guard/core": "workspace:*",
         "@typesafe-ai/sdk": "0.6.x",
       },
     },

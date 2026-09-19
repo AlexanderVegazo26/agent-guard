@@ -1,19 +1,25 @@
 # AgentGuard Autofix — Design
 
-**Document version:** 0.1
-**Status:** Proposed — **not implemented**. This document's own conclusion
-is that autofix is currently *blocked* on two prerequisites (§4). Do not
-build against this document until those are closed.
+**Document version:** 0.2
+**Status:** Partially implemented. §9's `propose`/`show` half — detecting
+a recurring pattern across ≥2 stored runs and generating a diff + rationale
+— is real (`packages/cli/src/commands/autofix.ts`,
+`agentguard autofix propose`/`show`) because it makes no claim about
+whether the proposed fix works. §5's **validation gate is still not
+implemented and remains blocked on §4's two prerequisites** — there is no
+`autofix validate` and no `autofix apply` command, and none should be
+built until §4.1/§4.2 are closed. Every proposal `autofix show` prints is
+labeled `NOT VALIDATED` for exactly this reason.
 
 ---
 
 ## 1. Problem
 
 Detection and explanation (the shipped product) answer "is this agent
-behaving well, and if not, why." They do not close the loop. A team that
-gets a REVIEW with a good root-cause explanation still has to manually
-translate that explanation into an edit to the agent's own instructions,
-re-run everything, and eyeball whether it actually helped.
+behaving well, and if not, why." On their own they don't close the loop:
+a team that gets a REVIEW with a good root-cause explanation still has to
+manually translate that explanation into an edit to the agent's own
+instructions, re-run everything, and eyeball whether it actually helped.
 
 Autofix is that closing step, scoped narrowly:
 
@@ -22,6 +28,12 @@ Autofix is that closing step, scoped narrowly:
 > instructions (`agent.md` / system prompt / tool descriptions), and prove
 > — empirically, via the same evaluation pipeline that found the problem —
 > that the edit actually helped before anyone treats it as a fix.
+
+**As of this document's v0.2, the *propose* half is real** — the pattern
+detection and the diff-generation step. **The *prove* half is not** —
+§5's validation gate is unbuilt, blocked on §4. A proposal today is a
+reviewable suggestion, not a demonstrated improvement; every proposal
+`autofix show` prints says so explicitly.
 
 ## 2. Non-goals
 
@@ -260,13 +272,21 @@ project memory, not checked into this repo). It is built around a real
 recurring finding this project's own live-agent run actually produced —
 the TodoMVC run's `toolWasAppropriate` REVIEW on exploratory
 `snapshot`/`hover` calls — but the "after" numbers in it are illustrative
-and clearly marked as such: autofix itself is not built, so no such
-validation run has actually happened yet. Building the mockup surfaced
-one addition worth recording here: the before/after table needs a
-visible **baseline variance band** drawn per row (§4.3), not just a
-number in a caveat line — without it, a row that moved less than the
-band still *looks* like an improvement at a glance, which is the exact
-misreading §4.3 exists to prevent.
+and clearly marked as such: no validation run has actually happened yet.
+Building the mockup surfaced one addition worth recording here: the
+before/after table needs a visible **baseline variance band** drawn per
+row (§4.3), not just a number in a caveat line — without it, a row that
+moved less than the band still *looks* like an improvement at a glance,
+which is the exact misreading §4.3 exists to prevent.
+
+**What `agentguard autofix show` actually prints today (§9/§10) is items
+1, 2 and 4 of this section only** — verdict-equivalent header, problem
+(evidence + explanation), and the diff + rationale. Items 3 (the
+before/after impact table) and 5 (cost/variance caveats beyond the
+blanket "NOT VALIDATED" label) don't exist yet, because they describe the
+*validation* gate's output, and §5 isn't built. Don't read the current
+CLI output as this section's full spec delivered — it's the proposal
+half only.
 
 ## 8. Cost model
 
@@ -288,7 +308,7 @@ therefore state, and any implementation must enforce:
   `ANTHROPIC_API_KEY` spend: asked for explicitly, every time, never
   assumed from a prior grant.
 
-## 9. Data model (proposed, not implemented)
+## 9. Data model — **implemented** (propose/show only)
 
 ```typescript
 interface FixProposal {
@@ -299,7 +319,7 @@ interface FixProposal {
   diff: string;                    // unified diff against targetPath
   rationale: string;               // fix-proposer's own explanation, for the human
   proposedAt: string;
-  validation?: {
+  validation?: {                   // NOT YET WRITABLE — §5's gate isn't built. Always absent today.
     runIds: string[];
     comparison: RunComparison;     // packages/core/compare.ts, reused as-is
     verdict: "accepted-for-review" | "rejected-regression" | "rejected-no-improvement";
@@ -307,9 +327,12 @@ interface FixProposal {
 }
 ```
 
-`FixProposerEngine` mirrors the existing `EscalationEngine` shape
-(single-purpose interface, a `MockFixProposerEngine` test double, a real
-implementation calling a frontier model):
+`packages/decision/src/fixProposer.ts` — `FixProposerEngine` mirrors the
+`EscalationEngine` shape exactly as this section originally specified
+(single-purpose interface, `MockFixProposerEngine` test double,
+`AnthropicFixProposerEngine` as the real implementation — plain `fetch`
+against the Messages API, same reasoning as the escalation engine: the
+Jev SDK has no free-text/diff capability):
 
 ```typescript
 interface FixProposerRequest {
@@ -326,29 +349,43 @@ interface FixProposerEngine {
 }
 ```
 
-## 10. Proposed CLI surface (not built)
+`RecurringFinding` requires `occurrences >= 2` by construction
+(`packages/cli/src/commands/autofix.ts`'s `detectRecurringFindings`,
+scanning `fail`/`review` results across the given stored runs) — a
+single-run "finding" is never handed to the proposer, matching PRD §12's
+n=1-is-an-anecdote rule. §11's "one proposal per finding, never batched"
+rule is also implemented as written: `autofix propose` loops findings and
+writes one `FixProposal` file per finding.
+
+## 10. CLI surface — **`propose`/`show` implemented, `validate`/`apply` still not**
 
 ```
-agentguard autofix propose --agent-md <path> --assertions a,b [--store <dir>]
-    Detects a recurring pattern across stored runs, calls the fix-proposer,
-    writes a FixProposal to .agentguard/fixes/<id>.json. Never touches
-    --agent-md.
+agentguard autofix propose --agent-md <path> --runs <id1,id2,...> [--store <dir>]
+    Detects a recurring pattern (>=2 occurrences) across the given stored
+    runs, calls the fix-proposer once per finding, writes each as a
+    FixProposal to .agentguard/fixes/<id>.json. Never touches --agent-md.
+    Requires ANTHROPIC_API_KEY (degrades with a clear error, never a crash,
+    when absent — same convention as escalation/doctor).
 
+agentguard autofix show <fix-id> [--store <dir>]
+    Prints the diff, rationale, targeted assertion(s) and baseline runs —
+    and unconditionally prints "NOT VALIDATED", since no FixProposal this
+    build produces ever carries a `validation` field.
+```
+
+**Not built, still blocked on §4:**
+
+```
 agentguard autofix validate <fix-id> [--store <dir>]
-    Runs the validation gate (§5) live. Requires explicit confirmation of
-    the cost estimate (§8) before spending. Updates the FixProposal with
-    its verdict.
-
-agentguard autofix show <fix-id>
-    Renders the fix report (§7) — the diff, rationale, the full before/after
-    table and its cost/variance caveats — for a human to actually read
-    before doing anything.
+    Would run the validation gate (§5) live, requiring explicit
+    confirmation of the cost estimate (§8) before spending, and would
+    populate the FixProposal's `validation` field. Does not exist.
 ```
 
-No `apply` subcommand is proposed here. Applying a diff to `agent.md` is
-an ordinary file edit a human makes after reading `autofix show`'s output
-— the same trust boundary as reviewing any other diff, deliberately not
-automated by this tool.
+No `apply` subcommand exists or is proposed. Applying a diff to
+`agent.md` is an ordinary file edit a human makes after reading `autofix
+show`'s output — the same trust boundary as reviewing any other diff,
+deliberately never automated by this tool.
 
 ## 11. Open questions, explicitly deferred
 

@@ -70,7 +70,7 @@ of question that goes to the engine.
 | Package | Owns |
 | --- | --- |
 | `@agent-guard/core` | Run/event/evidence schemas, the evidence graph, config, calibration, the filesystem run store |
-| `@agent-guard/decision` | The `DecisionEngine` interface, the real Jev adapter, and a scriptable mock for tests |
+| `@agent-guard/decision` | The `DecisionEngine`/`EscalationEngine`/`FixProposerEngine` interfaces, real Jev/Anthropic adapters, and scriptable mocks for tests |
 | `@agent-guard/assertions` | All 21 assertions, the evaluation pipeline, the degradation ladder |
 | `@agent-guard/observe` | A real HTTP/HTTPS fault-injecting proxy (with MITM for HTTPS), redaction, MCP transport observation |
 | `@agent-guard/playwright` | A Playwright Test fixture (`observe`/`inject`/`verify`) and a Playwright CLI transcript adapter |
@@ -165,6 +165,8 @@ agentguard calibrate [--store <dir>]                         Report the calibrat
 agentguard doctor [--live]                                   Verify Node/.nvmrc, API key, engine capabilities
 agentguard report [--store <dir>]                            Write json/junit/html reports from stored decisions
 agentguard compare <before-run-id> <after-run-id>            Diff two stored runs' verdicts (exit 1 on any regression)
+agentguard autofix propose --agent-md <path> --runs <ids>    Propose a diff for a recurring finding (never applies it)
+agentguard autofix show <fix-id>                             Print a proposed fix's diff/rationale (always "NOT VALIDATED")
 ```
 
 `agentguard test`/`replay` default to a scriptable **mock** decision engine —
@@ -179,12 +181,22 @@ never changes. Requires `ANTHROPIC_API_KEY`; without it, `--escalate` warns
 and leaves those results as ordinary unexplained REVIEWs rather than
 failing the run.
 
+`agentguard autofix propose` detects a pattern that failed or landed in
+REVIEW across **2 or more** stored runs (never a single sample) and asks a
+frontier LLM to propose a minimal diff to the agent's own instructions —
+one proposal per recurring finding, written to `.agentguard/fixes/`, never
+applied automatically. See [`docs/AUTOFIX.md`](docs/AUTOFIX.md) for the
+full design; the *validation* half (proving a proposed fix actually helps
+via a live re-evaluation) isn't built yet — every proposal is explicitly
+labeled `NOT VALIDATED` until you re-run `agentguard test --live` and
+`agentguard compare` yourself.
+
 ## Development
 
 ```bash
 bun install
 bun run build   # tsc -b across the workspace
-bun run test    # vitest — 180 tests across all packages
+bun run test    # vitest — 187 tests across all packages
 bun run lint    # oxlint
 bun run test:e2e  # real Playwright Test CLI runner against the fixture
 ```
@@ -210,9 +222,14 @@ part of the normal test run.
 
 MVP-complete against the PRD/TRD: all 21 assertions implemented, the full
 20-fixture golden suite plus 10 correct-behavior fixtures, a real fault
-proxy with redaction, an MCP server, a Playwright CLI adapter, LLM
-escalation for uncertain verdicts, a run-to-run comparison command
-(`agentguard compare`), and json/junit/html reporting. 180 tests
-+ 2 real Playwright-CLI-run e2e tests, all green. Calibration is not yet statistically validated (needs ≥100 live
-samples per assertion) — confidence values from a live run are advisory
-until then.
+proxy with redaction, an MCP server, a generic transcript adapter (with
+Playwright as the pre-built default), LLM escalation for uncertain
+verdicts, a run-to-run comparison command (`agentguard compare`), a
+zero-setup entry point (`agentguard watch`), and json/junit/html
+reporting. 187 tests + 2 real Playwright-CLI-run e2e tests, all green.
+Calibration is not yet statistically validated (needs ≥100 live samples
+per assertion) — confidence values from a live run are advisory until
+then. **Detects and explains agent inefficiency; does not yet fix it
+end-to-end** — `agentguard autofix propose` generates a reviewable,
+unvalidated diff suggestion (see [`docs/AUTOFIX.md`](docs/AUTOFIX.md));
+proving a proposed fix actually helps is a deliberately unbuilt next step.
