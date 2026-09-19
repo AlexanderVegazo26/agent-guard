@@ -185,11 +185,10 @@ failing the run.
 REVIEW across **2 or more** stored runs (never a single sample) and asks a
 frontier LLM to propose a minimal diff to the agent's own instructions —
 one proposal per recurring finding, written to `.agentguard/fixes/`, never
-applied automatically. See [`docs/AUTOFIX.md`](docs/AUTOFIX.md) for the
-full design; the *validation* half (proving a proposed fix actually helps
-via a live re-evaluation) isn't built yet — every proposal is explicitly
-labeled `NOT VALIDATED` until you re-run `agentguard test --live` and
-`agentguard compare` yourself.
+applied automatically. The *validation* half (proving a proposed fix
+actually helps via a live re-evaluation) isn't built yet — every proposal
+is explicitly labeled `NOT VALIDATED` until you re-run `agentguard test
+--live` and `agentguard compare` yourself.
 
 ## Development
 
@@ -211,13 +210,6 @@ adversity is never mistaken for a failing one). `tests/golden.test.ts` and
 `tests/correct-behavior.test.ts` run both suites against the mock engine as
 part of the normal test run.
 
-## Design docs
-
-- [`docs/PRD.md`](docs/PRD.md) — product requirements, target users, the
-  assertion catalogue, the mutation engine, success criteria
-- [`docs/TRD.md`](docs/TRD.md) — architecture, data model, the evaluation
-  pipeline, degradation ladder, security requirements
-
 ## Status
 
 MVP-complete against the PRD/TRD: all 21 assertions implemented, the full
@@ -231,5 +223,5 @@ Calibration is not yet statistically validated (needs ≥100 live samples
 per assertion) — confidence values from a live run are advisory until
 then. **Detects and explains agent inefficiency; does not yet fix it
 end-to-end** — `agentguard autofix propose` generates a reviewable,
-unvalidated diff suggestion (see [`docs/AUTOFIX.md`](docs/AUTOFIX.md));
-proving a proposed fix actually helps is a deliberately unbuilt next step.
+unvalidated diff suggestion; proving a proposed fix actually helps is a
+deliberately unbuilt next step.
