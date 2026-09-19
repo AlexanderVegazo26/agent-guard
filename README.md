@@ -74,8 +74,8 @@ of question that goes to the engine.
 | `@agent-guard/assertions` | All 21 assertions, the evaluation pipeline, the degradation ladder |
 | `@agent-guard/observe` | A real HTTP/HTTPS fault-injecting proxy (with MITM for HTTPS), redaction, MCP transport observation |
 | `@agent-guard/playwright` | A Playwright Test fixture (`observe`/`inject`/`verify`) and a Playwright CLI transcript adapter |
-| `@agent-guard/mcp` | An MCP server exposing the run/evidence/assertion/mutation lifecycle to an orchestrating agent |
-| `@agent-guard/cli` | `agentguard` — `watch`, `test`, `replay`, `calibrate`, `doctor`, `report`, `compare`, `init` |
+| `@agent-guard/mcp` | An MCP server exposing the run/evidence/assertion/mutation lifecycle to an orchestrating agent — a real `agentguard-mcp` stdio launcher, deferred engine construction so it starts without an API key |
+| `@agent-guard/cli` | `agentguard` — `watch`, `test`, `replay`, `calibrate`, `doctor`, `report`, `compare`, `init`, `review`, `export`/`verify-pack`, `history`, `review-pr`, `audit-fixtures`, `autofix` |
 
 ## The 21 assertions
 
@@ -180,7 +180,7 @@ agentguard review record <run-id> <assertion> <pass|fail|cannot-tell> --reason <
 agentguard export <run-id> --out <dir>                       Export a tamper-evident copy of a run (SHA-256 manifest)
 agentguard verify-pack <pack-dir>                            Recompute and check an exported pack's manifest
 agentguard history --assertion <id> [--baseline <run-id>]    Per-assertion verdict series across stored runs
-agentguard review-pr --base <ref> --head <ref>               Deterministic coding-agent checks against a real git diff
+agentguard review-pr --base <ref> --head <ref> [--repo <dir>]   Deterministic coding-agent checks against a real git diff
 agentguard audit-fixtures [--fixtures <dir>]                 Check every fixture's mustCite ids resolve to real evidence
 agentguard autofix propose --agent-md <path> --runs <ids>    Propose a diff for a recurring finding (never applies it)
 agentguard autofix show <fix-id>                             Print a proposed fix's diff/rationale (always "NOT VALIDATED")
@@ -222,7 +222,7 @@ is explicitly labeled `NOT VALIDATED` until you re-run `agentguard test
 ```bash
 bun install
 bun run build   # tsc -b across the workspace
-bun run test    # vitest — 187 tests across all packages
+bun run test    # vitest — 345 tests across all packages
 bun run lint    # oxlint
 bun run test:e2e  # real Playwright Test CLI runner against the fixture
 ```
@@ -239,16 +239,57 @@ part of the normal test run.
 
 ## Status
 
-MVP-complete against the PRD/TRD: all 21 assertions implemented, the full
+**MVP (PRD.md/TRD.md) is complete**: all 21 assertions, the full
 20-fixture golden suite plus 10 correct-behavior fixtures, a real fault
 proxy with redaction, an MCP server, a generic transcript adapter (with
 Playwright as the pre-built default), LLM escalation for uncertain
 verdicts, a run-to-run comparison command (`agentguard compare`), a
 zero-setup entry point (`agentguard watch`), and json/junit/html
-reporting. 187 tests + 2 real Playwright-CLI-run e2e tests, all green.
+reporting.
+
+**The next cycle (`docs/PRD2.md`) has real, tested work behind all
+eleven of its named features** — not all of them complete, and the
+document says exactly where each one stops. Highlights:
+
+- **Adjudication** (`agentguard review`) turns an open REVIEW verdict
+  into a workflow instead of a dead end, and bridges human-adjudicated
+  ground truth into calibration.
+- **An online guard** can actually block a live MCP tool call before it
+  reaches the real server — verified against the real
+  `@modelcontextprotocol/sdk`, not simulated: a server handler that
+  would delete data was registered, the guard blocked the call, and the
+  handler never ran.
+- **Tool-definition and multi-agent evidence** (`tool_definition`,
+  `agent_spawn`/`agent_result`) close the gap where an instruction
+  hidden in a tool's own description, or a sub-agent's unverified claim,
+  was invisible to the evidence graph.
+- **A tamper-evident export** (`agentguard export`/`verify-pack`), a
+  **per-assertion history view with a baseline regression check**
+  (`agentguard history`), and a **deterministic coding-agent reviewer**
+  (`agentguard review-pr`) that runs against a real `git diff` — tested
+  against this repository's own history and against an unrelated,
+  external real-world repository, where it found and fixed two genuine
+  false-positive bugs in the process (see `docs/PRD2.md`'s changelog for
+  both).
+- **Nine further correctness fixes** from an independent code review:
+  redaction that existed but was never called, a config file that was
+  scaffolded but never loaded, a calibration bug that inverted confidence
+  for roughly half the assertion catalogue, substring fault matching, a
+  4xx-blind contradiction linker, a quadratic event store, a CLI
+  flag-parsing bug, a missing MCP launcher, and a proxy connection leak.
+
+**What's deliberately not built, stated rather than glossed over:** every
+Noul-based assertion PRD2 proposes (`diffMatchesTask`,
+`noToolDescriptionInjection`, `noCascadingFailure`, and others) needs
+live Jev validation before shipping — this project's own standing rule,
+learned from a real fixture that couldn't discriminate its own expected
+verdict — and none has been validated live this cycle. The autofix
+validation gate, npm publishing, the OpenTelemetry importer, and the
+static dashboard are unbuilt for the same reason or for want of
+credentials/fixture volume this repo doesn't have yet. `docs/PRD2.md`
+names every gap next to the feature it belongs to; nothing here claims
+more than what's actually been run and verified.
+
 Calibration is not yet statistically validated (needs ≥100 live samples
 per assertion) — confidence values from a live run are advisory until
-then. **Detects and explains agent inefficiency; does not yet fix it
-end-to-end** — `agentguard autofix propose` generates a reviewable,
-unvalidated diff suggestion; proving a proposed fix actually helps is a
-deliberately unbuilt next step.
+then. 345 tests + 2 real Playwright-CLI-run e2e tests, all green.

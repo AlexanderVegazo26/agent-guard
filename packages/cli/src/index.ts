@@ -202,6 +202,7 @@ async function main(): Promise<void> {
       head,
       description: flagValue(rest, "--description"),
       testResultsPath: flagValue(rest, "--test-results"),
+      cwd: flagValue(rest, "--repo"),
     });
     return;
   }
@@ -290,7 +291,7 @@ function printHelp(): void {
       "  export <run-id> --out <dir> [--store <dir>]   Export a tamper-evident copy of a run (SHA-256 manifest)",
       "  verify-pack <pack-dir>                         Recompute and check an exported pack's manifest",
       "  history --assertion <id> [--baseline <run-id>] [--store <dir>]   Per-assertion verdict series across stored runs",
-      "  review-pr --base <ref> --head <ref> [--description <text>] [--test-results <path>]   Deterministic coding-agent checks against a real git diff",
+      "  review-pr --base <ref> --head <ref> [--repo <dir>] [--description <text>] [--test-results <path>]   Deterministic coding-agent checks against a real git diff",
       "  audit-fixtures [--fixtures <dir>]              Check every fixture's mustCite ids resolve to real evidence",
       "  watch [--task <text>] [--config <path>] --transcript <file> | -- <command> [args...]   Zero-setup, no API key: point at any agent",
       "  autofix propose --agent-md <path> --runs <id1,id2,...> [--store <dir>]   Propose a diff for a recurring finding (never applies it)",

@@ -65,20 +65,55 @@ describe("claimedTestsExist", () => {
 
   it("passes when a named test genuinely appears in a touched test file's patch", () => {
     const files: ChangedFile[] = [{ path: "src/login.test.ts", additions: 5, deletions: 0, patch: "+it('rejects an expired token', () => { ... })" }];
-    const result = claimedTestsExist("Added `rejects an expired token` to cover this.", files);
+    const result = claimedTestsExist("Added a test named `rejects an expired token` to cover this.", files);
     expect(result.status).toBe("pass");
   });
 
   it("fails when a named test never appears in any touched test file", () => {
     const files: ChangedFile[] = [{ path: "src/login.test.ts", additions: 5, deletions: 0, patch: "+it('something else', () => {})" }];
-    const result = claimedTestsExist("Added `rejects an expired token` to cover this.", files);
+    const result = claimedTestsExist("Added a test named `rejects an expired token` to cover this.", files);
     expect(result.status).toBe("fail");
     expect(result.explanation).toContain("rejects an expired token");
   });
 
   it("fails when the description names a test but no test file was touched at all", () => {
-    const result = claimedTestsExist("Added `some_test_name` for this.", [{ path: "src/login.ts", additions: 1, deletions: 0 }]);
+    const result = claimedTestsExist("Added a test called `some_test_name` for this.", [{ path: "src/login.ts", additions: 1, deletions: 0 }]);
     expect(result.status).toBe("fail");
+  });
+
+  it("PRD2 review fix: does not treat an ordinary backtick-quoted filename/config key as a claimed test, when the sentence never mentions testing", () => {
+    // Captured from a real commit message in an unrelated real repository
+    // (found via `agentguard review-pr` against it) — this used to
+    // produce a false FAIL with no test claim being made at all.
+    const description = [
+      "fix: redact the review documents, and narrow the allowlist that excused them",
+      "",
+      "`docs/` was untracked on `main`, so this branch is what publishes it.",
+      "`.gitleaks.toml` allowlisted the whole document from every identifier rule.",
+      "`CLAUDE.md` explains why it is excluded.",
+    ].join("\n");
+    const result = claimedTestsExist(description, [{ path: "src/redact.ts", additions: 3, deletions: 1 }]);
+    expect(result.status).toBe("pass");
+  });
+
+  it("PRD2 review fix (round 2): does not treat a narrative reference to an EXISTING test's prior behavior as a claim about this diff", () => {
+    // Captured from the same real repository's commit history: this
+    // sentence mentions "test" and backtick-quotes a real test file, but
+    // is describing a pre-existing bug in that test's CI wiring, not
+    // claiming this diff added or changed it.
+    const description =
+      "`_wiring.test.js` reported 60/60 green because CI never passed the `--src` flag the test itself provides.";
+    const result = claimedTestsExist(description, [{ path: "sdlc-suite/workflows/_brief.test.js", additions: 1, deletions: 0 }]);
+    expect(result.status).toBe("pass");
+  });
+
+  it("still catches a genuine test claim even when an earlier sentence backtick-quotes something unrelated", () => {
+    const files: ChangedFile[] = [{ path: "src/login.test.ts", additions: 2, deletions: 0, patch: "+it('rejects an expired token', () => {})" }];
+    // Only the second sentence mentions "test", so only its backtick span
+    // is checked — `src/login.ts` in the first sentence is never treated
+    // as a claim at all.
+    const result = claimedTestsExist("Updated `src/login.ts`. Added a test for `rejects an expired token`.", files);
+    expect(result.status).toBe("pass");
   });
 });
 

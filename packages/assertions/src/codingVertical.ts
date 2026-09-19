@@ -121,11 +121,40 @@ const BACKTICKED_IDENTIFIER = /`([^`]+)`/g;
  * test in plain prose ("I added a test for the login flow") is not
  * checked — that needs judgment, not a string search, and is exactly the
  * kind of claim `diffMatchesTask` (deferred, needs live Jev) would cover.
+ *
+ * A backtick span only counts as a claimed test when its sentence
+ * contains both a test word ("test"/"tests"/"spec"/"specs") AND an
+ * addition/creation verb ("added", "wrote", "created", "new", ...) —
+ * found and fixed in two stages against real commit messages
+ * (`agentguard review-pr` run against an unrelated real repository, not
+ * this one):
+ *
+ * 1. Every backtick-quoted reference in an ordinary commit message —
+ *    filenames, config keys (`` `docs/` ``, `` `CLAUDE.md` ``,
+ *    `` `.gitleaks.toml` ``) — was treated as a claimed test name with
+ *    no gate at all, producing a false FAIL with no test claim being
+ *    made anywhere in the description.
+ * 2. Gating on "shares a sentence with the word test" (the first fix)
+ *    was still too broad: a real message describing an *existing* test's
+ *    prior behavior — "`_wiring.test.js` reported 60/60 green because CI
+ *    never passed the `--src` flag" — mentions "test" but never claims
+ *    this diff added or changed that test. The addition-verb requirement
+ *    narrows the claim to what this assertion is actually meant to check
+ *    (PRD2 F8: "every test the description names is in the diff" — a
+ *    claim about *this change*, not a narrative reference to test
+ *    behavior in general).
  */
+const SENTENCE_SPLIT = /(?<=[.!?\n])\s+/;
+const MENTIONS_TEST = /\b(test|tests|spec|specs)\b/i;
+const CLAIMS_ADDITION = /\b(added?|adds|adding|created?|creates|creating|wrote|writes|writing|new)\b/i;
+
 export function claimedTestsExist(description: string, files: ChangedFile[]): CodingVerdict {
   const claimed = new Set<string>();
-  for (const match of description.matchAll(BACKTICKED_IDENTIFIER)) {
-    if (match[1]) claimed.add(match[1]);
+  for (const sentence of description.split(SENTENCE_SPLIT)) {
+    if (!MENTIONS_TEST.test(sentence) || !CLAIMS_ADDITION.test(sentence)) continue;
+    for (const match of sentence.matchAll(BACKTICKED_IDENTIFIER)) {
+      if (match[1]) claimed.add(match[1]);
+    }
   }
   if (claimed.size === 0) {
     return { id: "claimedTestsExist", status: "pass", explanation: "the description names no specific test to check", evidence: [] };
