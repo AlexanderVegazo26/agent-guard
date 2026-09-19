@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
-import { appendFile, readFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile } from "node:fs/promises";
+import path from "node:path";
 import type { AssertionResult, AssertionStatus } from "./schema.js";
 
 /**
@@ -32,6 +33,7 @@ export function toCalibrationRecord(result: AssertionResult, expectedStatus: Ass
 
 export async function appendCalibrationRecords(filePath: string, records: CalibrationRecord[]): Promise<void> {
   if (records.length === 0) return;
+  await mkdir(path.dirname(filePath), { recursive: true });
   const lines = records.map((r) => `${JSON.stringify(r)}\n`).join("");
   await appendFile(filePath, lines, "utf8");
 }

@@ -28,6 +28,7 @@ async function main(): Promise<void> {
       fixturesRoot,
       live: rest.includes("--live"),
       storeRoot: flagValue(rest, "--store"),
+      escalate: rest.includes("--escalate"),
     });
     return;
   }
@@ -45,6 +46,7 @@ async function main(): Promise<void> {
       live: rest.includes("--live"),
       storeRoot: flagValue(rest, "--store"),
       assertions: assertionsFlag ? (assertionsFlag.split(",") as AssertionId[]) : undefined,
+      escalate: rest.includes("--escalate"),
     });
     return;
   }
@@ -80,8 +82,8 @@ function printHelp(): void {
       "agentguard <command> [options]",
       "",
       "  init                                          Scaffold config + .agentguard/ + fixtures/ directories",
-      "  test [--fixtures <dir>] [--live] [--store <dir>]   Run the golden suite (mock engine by default)",
-      "  replay <run-id> [--live] [--assertions a,b] [--store <dir>]   Re-evaluate a stored run",
+      "  test [--fixtures <dir>] [--live] [--escalate] [--store <dir>]   Run the golden suite (mock engine by default)",
+      "  replay <run-id> [--live] [--escalate] [--assertions a,b] [--store <dir>]   Re-evaluate a stored run",
       "  calibrate [--store <dir>]                     Report the §6.9 calibration curve",
       "  doctor [--live]                               Verify the environment (Node/.nvmrc, API key, engine capabilities)",
       "  report [--store <dir>]                        Write json/junit/html reports from every stored run's decisions",

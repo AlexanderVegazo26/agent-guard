@@ -8,7 +8,8 @@ import {
   toCalibrationRecord,
   type AssertionResult,
 } from "@agent-guard/core";
-import { MockDecisionEngine, JevDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
+import { AnthropicEscalationEngine, MockDecisionEngine, JevDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
+import { escalateReviews } from "@agent-guard/assertions";
 import { loadFixtureSuite } from "../fixtures.js";
 import { runFixture } from "../runner.js";
 
@@ -16,6 +17,8 @@ export interface TestCommandOptions {
   fixturesRoot: string;
   live: boolean;
   storeRoot?: string;
+  /** PRD §10.2 — send uncertainty-band REVIEW results to a frontier LLM for a root-cause explanation. Costs a separate API call per REVIEW; needs ANTHROPIC_API_KEY. */
+  escalate?: boolean;
 }
 
 /**
@@ -34,16 +37,24 @@ export async function runTestCommand(options: TestCommandOptions): Promise<numbe
   const store = new FilesystemRunStore(options.storeRoot);
   const calibrationPath = path.join(options.storeRoot ?? path.join(process.cwd(), ".agentguard"), "calibration.jsonl");
 
+  let escalationEngine: AnthropicEscalationEngine | null = null;
+  if (options.escalate) {
+    try {
+      escalationEngine = new AnthropicEscalationEngine();
+    } catch (err) {
+      console.warn(`agentguard: --escalate requested but no escalation engine is available (${err instanceof Error ? err.message : String(err)}) — REVIEWs will be left unexplained.`);
+    }
+  }
+
   for (const fixture of fixtures) {
     const engine: DecisionEngine = options.live ? new JevDecisionEngine() : new MockDecisionEngine(fixture.mock);
-    const results = await runFixture(fixture, engine);
-    console.log(formatConsole(fixture.name, results));
+    let results = await runFixture(fixture, engine);
 
     const graph = await new DefaultEvidenceCompiler().compile(fixture.run);
-    await store.saveRun(fixture.run);
-    await store.saveEvidence(fixture.run.id, { task: graph.task, items: graph.items, links: graph.links });
-    await store.saveDecisions(fixture.run.id, results);
 
+    // Calibration measures Jev's own raw signal, so it's recorded against
+    // the pre-escalation results — `toCalibrationRecord` only accepts
+    // `basis: "jev"` anyway, which escalation replaces with `"escalated"`.
     const calibrationRecords = Object.entries(results)
       .map(([id, result]) => {
         const expected = fixture.expected[id];
@@ -52,6 +63,16 @@ export async function runTestCommand(options: TestCommandOptions): Promise<numbe
       })
       .filter((r): r is NonNullable<typeof r> => r !== null);
     await appendCalibrationRecords(calibrationPath, calibrationRecords);
+
+    if (escalationEngine) {
+      results = await escalateReviews(graph, results, escalationEngine);
+    }
+
+    console.log(formatConsole(fixture.name, results));
+
+    await store.saveRun(fixture.run);
+    await store.saveEvidence(fixture.run.id, { task: graph.task, items: graph.items, links: graph.links });
+    await store.saveDecisions(fixture.run.id, results);
 
     for (const [id, result] of Object.entries(results)) {
       allResults[`${fixture.name}::${id}`] = result;

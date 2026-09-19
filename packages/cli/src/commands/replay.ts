@@ -6,14 +6,15 @@ import {
   formatConsole,
   type AssertionId,
 } from "@agent-guard/core";
-import { evaluate } from "@agent-guard/assertions";
-import { JevDecisionEngine, MockDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
+import { escalateReviews, evaluate } from "@agent-guard/assertions";
+import { AnthropicEscalationEngine, JevDecisionEngine, MockDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
 
 export interface ReplayCommandOptions {
   runId: string;
   storeRoot?: string;
   live: boolean;
   assertions?: AssertionId[];
+  escalate?: boolean;
 }
 
 /**
@@ -47,6 +48,14 @@ export async function runReplayCommand(options: ReplayCommandOptions): Promise<n
   } catch (err) {
     console.error(`agentguard replay: evaluation failed — ${err instanceof Error ? err.message : String(err)}`);
     return 3;
+  }
+
+  if (options.escalate) {
+    try {
+      results = await escalateReviews(graph, results, new AnthropicEscalationEngine());
+    } catch (err) {
+      console.warn(`agentguard replay: --escalate requested but no escalation engine is available (${err instanceof Error ? err.message : String(err)}) — REVIEWs left unexplained.`);
+    }
   }
 
   console.log(formatConsole(options.runId, results));

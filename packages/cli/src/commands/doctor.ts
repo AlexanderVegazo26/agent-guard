@@ -32,6 +32,7 @@ export async function runDoctorCommand(options: DoctorCommandOptions): Promise<n
   checks.push(checkNotRunningUnderBun());
   checks.push(checkApiKeyPresence());
   checks.push(checkEngineCapabilities());
+  checks.push(checkEscalationKeyPresence());
   checks.push({ name: "Playwright version/browsers", status: "skip", detail: "no Playwright integration in this build" });
   checks.push({ name: "Proxy CA installed in a browser profile", status: "skip", detail: "no live browser in this build" });
 
@@ -82,6 +83,20 @@ function checkApiKeyPresence(): Check {
     return { name: "TYPESAFE_API_KEY", status: "fail", detail: "not set" };
   }
   return { name: "TYPESAFE_API_KEY", status: "ok", detail: "set" };
+}
+
+/**
+ * PRD §10.2 escalation, opt-in (`agentguard test --escalate`). Unlike
+ * `TYPESAFE_API_KEY`, missing this is a `warn`, not a `fail` — escalation is
+ * a nice-to-have on the uncertain tail, not required for AgentGuard to
+ * produce verdicts at all.
+ */
+function checkEscalationKeyPresence(): Check {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key || key.trim().length === 0) {
+    return { name: "ANTHROPIC_API_KEY (escalation)", status: "warn", detail: "not set — `--escalate` will skip REVIEW explanations" };
+  }
+  return { name: "ANTHROPIC_API_KEY (escalation)", status: "ok", detail: "set" };
 }
 
 function checkEngineCapabilities(): Check {
