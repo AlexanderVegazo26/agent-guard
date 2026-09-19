@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import type { AssertionResult, AssertionStatus } from "./schema.js";
+import type { Adjudication, AssertionResult, AssertionStatus } from "./schema.js";
 
 /**
  * §6.9 — calibration harness. Only results the decision engine actually
@@ -28,6 +28,38 @@ export function toCalibrationRecord(result: AssertionResult, expectedStatus: Ass
     signal: result.signal,
     confidence: result.confidence,
     correct: result.status === expectedStatus,
+  };
+}
+
+/**
+ * PRD2 F1 — the same conversion as `toCalibrationRecord`, but against a
+ * human's verdict on a REAL run instead of a synthetic fixture's declared
+ * `expected.json`. This is what closes PRD v0.6 §14's "held-out set of
+ * real agent runs with human-adjudicated verdicts" — every prior
+ * calibration record in this codebase came from the golden/correct-
+ * behavior fixtures, which are hand-authored and therefore, per §12's own
+ * circularity caveat, measure "does the evaluator behave as specified,"
+ * not "does it catch how real agents fail." An adjudicated record is the
+ * first kind of evidence that measures the second claim.
+ *
+ * `"cannot-tell"` produces no record — a human who couldn't determine
+ * ground truth from the evidence gives no signal about whether the
+ * verdict was correct, and forcing one in either direction would corrupt
+ * the curve with a fabricated data point.
+ */
+export function toAdjudicatedCalibrationRecord(
+  result: AssertionResult,
+  adjudication: Adjudication,
+): CalibrationRecord | null {
+  if (result.basis !== "jev") return null;
+  if (result.confidence === undefined) return null;
+  if (result.signal !== "noul-probability" && result.signal !== "derived-confidence") return null;
+  if (adjudication.humanVerdict === "cannot-tell") return null;
+  return {
+    assertionId: result.id,
+    signal: result.signal,
+    confidence: result.confidence,
+    correct: result.status === adjudication.humanVerdict,
   };
 }
 

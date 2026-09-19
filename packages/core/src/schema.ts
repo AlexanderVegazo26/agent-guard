@@ -226,6 +226,28 @@ export type AssertionId = z.infer<typeof AssertionId>;
 export const AssertionStatus = z.enum(["pass", "fail", "review", "not_applicable", "error"]);
 export type AssertionStatus = z.infer<typeof AssertionStatus>;
 
+// ---------------------------------------------------------------------------
+// PRD2 F1 — human adjudication. Every confidence number this product prints
+// is advisory until it has been validated against ground truth (§10.3 /
+// TRD §6.9), and ground truth for a real run only exists once a human has
+// looked at it. An adjudication is a human's verdict on one assertion's
+// result for one run, recorded separately from `decisions.json` (append-only
+// per assertion — re-adjudicating replaces a prior note, but never touches
+// the machine verdict it is judging).
+// ---------------------------------------------------------------------------
+
+export const HumanVerdict = z.enum(["pass", "fail", "cannot-tell"]);
+export type HumanVerdict = z.infer<typeof HumanVerdict>;
+
+export const Adjudication = z.object({
+  assertionId: z.string(),
+  humanVerdict: HumanVerdict,
+  reason: z.string(),
+  adjudicator: z.string(),
+  at: z.string().datetime(),
+});
+export type Adjudication = z.infer<typeof Adjudication>;
+
 export const DegradationRecord = z.object({
   strategy: z.enum(["tighten-selection", "split-batch", "chunk-aggregate", "fanout-cap", "review"]),
   reason: z.string(),

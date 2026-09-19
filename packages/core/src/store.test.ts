@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { Adjudication } from "./schema.js";
 import { AgentRun } from "./schema.js";
 import { FilesystemRunStore } from "./store.js";
 
@@ -114,6 +115,58 @@ describe("FilesystemRunStore", () => {
     expect(lines).toHaveLength(n);
     const ids = new Set(lines.map((l) => (JSON.parse(l) as { id: string }).id));
     expect(ids.size).toBe(n);
+  });
+
+  it("PRD2 F1: saveAdjudication/loadAdjudications round-trip, and re-adjudicating the same assertion replaces its prior entry", async () => {
+    await store.saveRun(RUN);
+    expect(await store.loadAdjudications(RUN.id)).toBeNull();
+
+    const first: Adjudication = {
+      assertionId: "noFabricatedCompletion",
+      humanVerdict: "pass",
+      reason: "Checked the network log myself — no contradicting request.",
+      adjudicator: "alex",
+      at: "2026-09-20T00:00:00.000Z",
+    };
+    await store.saveAdjudication(RUN.id, first);
+    expect(await store.loadAdjudications(RUN.id)).toEqual({ noFabricatedCompletion: first });
+
+    // A second assertion's adjudication is added, not overwriting the first.
+    const second: Adjudication = {
+      assertionId: "goalCompleted",
+      humanVerdict: "fail",
+      reason: "The todo was never actually created.",
+      adjudicator: "alex",
+      at: "2026-09-20T00:01:00.000Z",
+    };
+    await store.saveAdjudication(RUN.id, second);
+    expect(await store.loadAdjudications(RUN.id)).toEqual({
+      noFabricatedCompletion: first,
+      goalCompleted: second,
+    });
+
+    // Re-adjudicating "noFabricatedCompletion" replaces its own prior entry.
+    const revised: Adjudication = { ...first, humanVerdict: "fail", reason: "Missed it the first time.", at: "2026-09-20T00:02:00.000Z" };
+    await store.saveAdjudication(RUN.id, revised);
+    expect(await store.loadAdjudications(RUN.id)).toEqual({
+      noFabricatedCompletion: revised,
+      goalCompleted: second,
+    });
+
+    // decisions.json is never touched by adjudication.
+    expect(await store.loadDecisions(RUN.id)).toBeNull();
+  });
+
+  it("PRD2 F1: refuses to save an adjudication before saveRun() has created the directory", async () => {
+    await expect(
+      store.saveAdjudication("never-saved", {
+        assertionId: "x",
+        humanVerdict: "pass",
+        reason: "r",
+        adjudicator: "a",
+        at: "2026-09-20T00:00:00.000Z",
+      }),
+    ).rejects.toThrow();
   });
 
   it("listRunIds finds runs across multiple date directories", async () => {

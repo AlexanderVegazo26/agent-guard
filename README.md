@@ -165,9 +165,21 @@ agentguard calibrate [--store <dir>]                         Report the calibrat
 agentguard doctor [--live]                                   Verify Node/.nvmrc, API key, engine capabilities
 agentguard report [--store <dir>]                            Write json/junit/html reports from stored decisions
 agentguard compare <before-run-id> <after-run-id>            Diff two stored runs' verdicts (exit 1 on any regression)
+agentguard review list [--store <dir>]                       List open REVIEW verdicts nobody has adjudicated yet
+agentguard review record <run-id> <assertion> <pass|fail|cannot-tell> --reason <text>   Record a human verdict
 agentguard autofix propose --agent-md <path> --runs <ids>    Propose a diff for a recurring finding (never applies it)
 agentguard autofix show <fix-id>                             Print a proposed fix's diff/rationale (always "NOT VALIDATED")
 ```
+
+`agentguard review` (PRD2 F1) is what turns a REVIEW verdict from a dead
+end into a workflow: `list` surfaces every open REVIEW across the store,
+and `record` writes a human's verdict — separately from the machine's own
+`decisions.json`, never overwriting it — and, when the verdict is
+decisive (not `cannot-tell`), appends a real calibration record derived
+from a human who actually looked at the evidence, not a synthetic
+fixture's declared expectation. This is the mechanism that eventually
+lets `agentguard calibrate` validate against real runs, not only the
+golden/correct-behavior suites.
 
 `agentguard test`/`replay` default to a scriptable **mock** decision engine —
 free, deterministic, no network. Pass `--live` to evaluate against the real

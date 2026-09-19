@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { appendFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DefaultRedactor, type Redactor } from "./redaction.js";
-import type { AgentRun, AssertionResult, Evidence, EvidenceLink } from "./schema.js";
+import type { Adjudication, AgentRun, AssertionResult, Evidence, EvidenceLink } from "./schema.js";
 
 /**
  * §10.1 — filesystem storage. Portable, debuggable, and a native fit for CI
@@ -103,6 +103,29 @@ export class FilesystemRunStore {
     const dir = await this.runDirFor(runId);
     if (!dir) throw new Error(`FilesystemRunStore: no run directory found for "${runId}" — call saveRun() first`);
     await writeFile(path.join(dir, "decisions.json"), JSON.stringify(results, null, 2), "utf8");
+  }
+
+  /**
+   * PRD2 F1 — records one assertion's human verdict for this run, in
+   * `adjudications.json`, separate from `decisions.json`. Re-adjudicating
+   * the same assertion replaces its own prior entry (a human correcting
+   * their own note); it never touches `decisions.json`, which stays the
+   * machine's own record regardless of what a human later decides.
+   */
+  async saveAdjudication(runId: string, adjudication: Adjudication): Promise<void> {
+    const dir = await this.runDirFor(runId);
+    if (!dir) throw new Error(`FilesystemRunStore: no run directory found for "${runId}" — call saveRun() first`);
+    const existing = (await this.loadAdjudications(runId)) ?? {};
+    const updated = { ...existing, [adjudication.assertionId]: adjudication };
+    await writeFile(path.join(dir, "adjudications.json"), JSON.stringify(updated, null, 2), "utf8");
+  }
+
+  async loadAdjudications(runId: string): Promise<Record<string, Adjudication> | null> {
+    const dir = await this.runDirFor(runId);
+    if (!dir) return null;
+    const filePath = path.join(dir, "adjudications.json");
+    if (!existsSync(filePath)) return null;
+    return JSON.parse(await readFile(filePath, "utf8")) as Record<string, Adjudication>;
   }
 
   async loadRun(runId: string): Promise<AgentRun | null> {

@@ -7,10 +7,11 @@ import {
   computeCalibrationCurve,
   readCalibrationRecords,
   splitCalibrationCurves,
+  toAdjudicatedCalibrationRecord,
   toCalibrationRecord,
   type CalibrationRecord,
 } from "./calibration.js";
-import type { AssertionResult } from "./schema.js";
+import type { Adjudication, AssertionResult } from "./schema.js";
 
 describe("toCalibrationRecord — §6.9's basis allowlist", () => {
   it("excludes a deterministic result (correct by construction)", () => {
@@ -40,6 +41,46 @@ describe("toCalibrationRecord — §6.9's basis allowlist", () => {
       correct: true,
     });
     expect(toCalibrationRecord(result, "fail")!.correct).toBe(false);
+  });
+});
+
+describe("toAdjudicatedCalibrationRecord — PRD2 F1, human ground truth on a real run", () => {
+  const jevResult: AssertionResult = {
+    id: "noFabricatedCompletion",
+    status: "pass",
+    basis: "jev",
+    signal: "noul-probability",
+    confidence: 0.92,
+    evidence: ["e-task"],
+    durationMs: 5,
+  };
+
+  function adjudication(humanVerdict: Adjudication["humanVerdict"]): Adjudication {
+    return { assertionId: "noFabricatedCompletion", humanVerdict, reason: "r", adjudicator: "a", at: "2026-09-20T00:00:00.000Z" };
+  }
+
+  it("produces a record marking correctness against the human's verdict", () => {
+    expect(toAdjudicatedCalibrationRecord(jevResult, adjudication("pass"))).toEqual({
+      assertionId: "noFabricatedCompletion",
+      signal: "noul-probability",
+      confidence: 0.92,
+      correct: true,
+    });
+    expect(toAdjudicatedCalibrationRecord(jevResult, adjudication("fail"))!.correct).toBe(false);
+  });
+
+  it("produces no record for \"cannot-tell\" — no ground truth signal either way", () => {
+    expect(toAdjudicatedCalibrationRecord(jevResult, adjudication("cannot-tell"))).toBeNull();
+  });
+
+  it("excludes a deterministic result, same allowlist as toCalibrationRecord", () => {
+    const deterministic: AssertionResult = { ...jevResult, basis: "deterministic" };
+    expect(toAdjudicatedCalibrationRecord(deterministic, adjudication("pass"))).toBeNull();
+  });
+
+  it("excludes a result with no confidence", () => {
+    const noConfidence: AssertionResult = { ...jevResult, confidence: undefined };
+    expect(toAdjudicatedCalibrationRecord(noConfidence, adjudication("pass"))).toBeNull();
   });
 });
 
