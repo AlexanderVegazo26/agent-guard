@@ -225,8 +225,13 @@ function link(items: Evidence[]): EvidenceLink[] {
     }
   }
 
-  // A success claim contradicted by a recorded 5xx with no later success
-  // before the claim — the mechanical contradiction PRD §7 depends on.
+  // A success claim contradicted by a recorded HTTP failure (4xx or 5xx)
+  // with no later success before the claim — the mechanical contradiction
+  // PRD §7 depends on. PRD2 review finding: this used to check `status >=
+  // 500` only, so a declined payment (402), a forbidden request (403) or a
+  // rate limit (429) followed by "Payment completed successfully" produced
+  // no contradiction — the archetypal false-completion case for a payment
+  // API that (correctly) uses 4xx for a declined charge, not 5xx.
   const claims = items.filter((e) => e.type === "agent_claim");
   const networkEvents = items.filter((e) => e.type === "network");
   for (const claim of claims) {
@@ -235,7 +240,7 @@ function link(items: Evidence[]): EvidenceLink[] {
 
     const failuresBefore = networkEvents.filter((n) => {
       const status = statusOf(n);
-      return n.seq <= claim.seq && status !== undefined && status >= 500;
+      return n.seq <= claim.seq && status !== undefined && status >= 400;
     });
 
     for (const failure of failuresBefore) {

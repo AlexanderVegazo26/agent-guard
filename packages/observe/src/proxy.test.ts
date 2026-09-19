@@ -187,6 +187,27 @@ describe("HttpFaultProxy", () => {
     ]);
   });
 
+  it("PRD2 review fix: a fault on /api/payment does NOT fire for a look-alike path (/api/payment-refund)", async () => {
+    const upstream = await startPlainUpstream();
+    cleanups.push(upstream.close);
+    const proxy = new HttpFaultProxy();
+    const { port } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    proxy.inject({ type: "http", url: "/api/payment", status: 500 });
+
+    // Before the fix, `url.includes(fault.url)` matched this — a fault
+    // meant for one endpoint would have fired on an unrelated one that
+    // merely shares a text prefix.
+    const lookAlike = await requestViaHttpProxy(port, `http://127.0.0.1:${upstream.port}/api/payment-refund`);
+    expect(lookAlike.status).toBe(200);
+
+    // The exact path still fires, including with a query string attached —
+    // a fault on a bare path is not defeated by a request's query params.
+    const exact = await requestViaHttpProxy(port, `http://127.0.0.1:${upstream.port}/api/payment?currency=usd`);
+    expect(exact.status).toBe(500);
+  });
+
   it("only fires an http fault `times` times, then forwards to the real upstream", async () => {
     const upstream = await startPlainUpstream();
     cleanups.push(upstream.close);

@@ -107,7 +107,7 @@ export class HttpFaultProxy implements FaultProxy {
   inject(fault: FaultSpec): void {
     this.faults.push({
       spec: fault,
-      matches: (url) => url.includes(fault.url),
+      matches: (url) => matchesFaultUrl(url, fault.url),
       timesRemaining: fault.type === "http" ? fault.times ?? Number.POSITIVE_INFINITY : Number.POSITIVE_INFINITY,
     });
   }
@@ -308,6 +308,32 @@ export class HttpFaultProxy implements FaultProxy {
     if (requestBodyRaw.length > 0) upstreamReq.write(requestBodyRaw);
     upstreamReq.end();
   }
+}
+
+/**
+ * PRD2 review finding: fault matching used to be `url.includes(fault.url)`,
+ * a plain substring test. A fault on `/api` therefore also matched
+ * `/api-docs`, `/apikeys`, or any URL carrying that text in its query
+ * string — never the intent of a fault meant for one specific endpoint.
+ *
+ * `fault.url` is a path (every caller in this codebase passes one, e.g.
+ * `/api/payment`), matched against the target URL's own path, ignoring
+ * its query string — a fault on a bare path still fires no matter what
+ * query parameters a real request happens to carry. A `fault.url` that is
+ * itself a full absolute URL is matched exactly instead, for callers that
+ * prefer to be that specific.
+ */
+function matchesFaultUrl(targetUrl: string, faultUrl: string): boolean {
+  if (targetUrl === faultUrl) return true;
+  if (faultUrl.startsWith("http://") || faultUrl.startsWith("https://")) return false;
+
+  let pathOnly: string;
+  try {
+    pathOnly = new URL(targetUrl).pathname;
+  } catch {
+    pathOnly = targetUrl.split("?")[0]!;
+  }
+  return pathOnly === faultUrl;
 }
 
 async function generateCA(): Promise<Pem> {
