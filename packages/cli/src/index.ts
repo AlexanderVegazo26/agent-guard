@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import type { AssertionId } from "@agent-guard/core";
 import { runTestCommand } from "./commands/test.js";
 import { runCalibrateCommand } from "./commands/calibrate.js";
@@ -141,9 +142,29 @@ async function main(): Promise<void> {
   process.exitCode = 1;
 }
 
-function flagValue(args: string[], flag: string): string | undefined {
+/**
+ * PRD2 review finding: this used to return `args[i + 1]` unconditionally,
+ * so `--task --store x` silently set `task` to the literal string
+ * `"--store"` instead of leaving it missing — a flag with no value
+ * swallowed the *next flag* as if it were one. Also gains `--flag=value`
+ * support, which nothing here previously recognized at all.
+ *
+ * Exported (this file has no other tests) so `flagValue.test.ts` can
+ * cover it directly without spawning the CLI binary.
+ */
+export function flagValue(args: string[], flag: string): string | undefined {
   const i = args.indexOf(flag);
-  return i >= 0 ? args[i + 1] : undefined;
+  if (i >= 0) {
+    const next = args[i + 1];
+    // A bare flag with nothing after it, or immediately followed by
+    // another flag, has no value — never treat the next flag as this
+    // flag's value.
+    if (next === undefined || next.startsWith("--")) return undefined;
+    return next;
+  }
+  const prefix = `${flag}=`;
+  const combined = args.find((a) => a.startsWith(prefix));
+  return combined ? combined.slice(prefix.length) : undefined;
 }
 
 function printHelp(): void {
@@ -165,7 +186,14 @@ function printHelp(): void {
   );
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exitCode = 3;
-});
+// Only run when this file is the actual entry point (`node dist/index.js
+// ...`), never on a plain `import` — otherwise a test importing
+// `flagValue` above would trigger a real CLI invocation against whatever
+// argv the test runner happened to be started with.
+const isEntryPoint = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isEntryPoint) {
+  main().catch((err) => {
+    console.error(err);
+    process.exitCode = 3;
+  });
+}
