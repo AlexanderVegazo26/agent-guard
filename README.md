@@ -169,6 +169,7 @@ agentguard review list [--store <dir>]                       List open REVIEW ve
 agentguard review record <run-id> <assertion> <pass|fail|cannot-tell> --reason <text>   Record a human verdict
 agentguard export <run-id> --out <dir>                       Export a tamper-evident copy of a run (SHA-256 manifest)
 agentguard verify-pack <pack-dir>                            Recompute and check an exported pack's manifest
+agentguard history --assertion <id> [--baseline <run-id>]    Per-assertion verdict series across stored runs
 agentguard autofix propose --agent-md <path> --runs <ids>    Propose a diff for a recurring finding (never applies it)
 agentguard autofix show <fix-id>                             Print a proposed fix's diff/rationale (always "NOT VALIDATED")
 ```
