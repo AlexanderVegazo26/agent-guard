@@ -6,3 +6,4 @@ export * from "./calibration.js";
 export * from "./exitCode.js";
 export * from "./consoleReporter.js";
 export * from "./compare.js";
+export * from "./transcriptAdapter.js";

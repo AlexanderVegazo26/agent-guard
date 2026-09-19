@@ -75,7 +75,7 @@ of question that goes to the engine.
 | `@agent-guard/observe` | A real HTTP/HTTPS fault-injecting proxy (with MITM for HTTPS), redaction, MCP transport observation |
 | `@agent-guard/playwright` | A Playwright Test fixture (`observe`/`inject`/`verify`) and a Playwright CLI transcript adapter |
 | `@agent-guard/mcp` | An MCP server exposing the run/evidence/assertion/mutation lifecycle to an orchestrating agent |
-| `@agent-guard/cli` | `agentguard` — `test`, `replay`, `calibrate`, `doctor`, `report`, `compare`, `init` |
+| `@agent-guard/cli` | `agentguard` — `watch`, `test`, `replay`, `calibrate`, `doctor`, `report`, `compare`, `init` |
 
 ## The 21 assertions
 
@@ -86,7 +86,36 @@ of question that goes to the engine.
 **Behavioral** — `recoveredFromFailure`, `handledAmbiguityCorrectly`, `avoidedUnnecessaryActions`, `stoppedWhenDone`
 **Foundational** — `evidenceSufficient` (a deterministic pre-check — runs before any semantic assertion is even attempted)
 
-## Quickstart
+## Try it in one command — no API key, no setup
+
+`agentguard watch` points AgentGuard at literally anything and evaluates
+what it can prove deterministically (fabricated completion claims,
+fabricated tool usage, evidence sufficiency) — no `TYPESAFE_API_KEY`, no
+fixtures, no config file:
+
+```bash
+bun install
+
+# Point it at any command — a real agent CLI, a script, anything
+node packages/cli/dist/index.js watch --task "Deploy the app" -- your-agent-cli deploy --env staging
+
+# Or feed it a transcript your own agent already logs (JSONL: {"command": "...", "output": "..."})
+node packages/cli/dist/index.js watch --task "Deploy the app" --transcript agent-log.jsonl
+```
+
+It prints a console report, persists the run, and writes a standalone
+HTML report you can open right away. An assertion that genuinely needs
+semantic judgment (not just what's mechanically provable) reports as an
+honest `REVIEW`, never a guessed pass — that's what `agentguard test
+--live` (below) is for.
+
+Playwright is the pre-built **default** for browser agents specifically —
+`@agent-guard/playwright`'s `PlaywrightCliAdapter` extends the same
+generic transcript adapter `watch` uses, adding real `@playwright/cli`
+page-state parsing on top. Nothing about the core pipeline is
+Playwright-specific.
+
+## Full quickstart (with the real decision engine)
 
 ```bash
 # 1. Install (Node 26+, bun workspaces)
@@ -129,6 +158,7 @@ test("checkout agent", async ({ agentguard }) => {
 
 ```
 agentguard init                                              Scaffold config + .agentguard/ + fixtures/ directories
+agentguard watch [--task <text>] --transcript <file> | -- <cmd> [args]    Zero-setup, no API key: point at any agent
 agentguard test [--fixtures <dir>] [--live] [--escalate] [--store <dir>]  Run the golden suite (mock engine by default)
 agentguard replay <run-id> [--live] [--escalate] [--assertions a,b]       Re-evaluate a stored run, no browser/agent/network
 agentguard calibrate [--store <dir>]                         Report the calibration curve (needs ≥100 live samples)
@@ -154,7 +184,7 @@ failing the run.
 ```bash
 bun install
 bun run build   # tsc -b across the workspace
-bun run test    # vitest — 165 tests across all packages
+bun run test    # vitest — 180 tests across all packages
 bun run lint    # oxlint
 bun run test:e2e  # real Playwright Test CLI runner against the fixture
 ```
@@ -182,7 +212,7 @@ MVP-complete against the PRD/TRD: all 21 assertions implemented, the full
 20-fixture golden suite plus 10 correct-behavior fixtures, a real fault
 proxy with redaction, an MCP server, a Playwright CLI adapter, LLM
 escalation for uncertain verdicts, a run-to-run comparison command
-(`agentguard compare`), and json/junit/html reporting. 165 tests
+(`agentguard compare`), and json/junit/html reporting. 180 tests
 + 2 real Playwright-CLI-run e2e tests, all green. Calibration is not yet statistically validated (needs ≥100 live
 samples per assertion) — confidence values from a live run are advisory
 until then.

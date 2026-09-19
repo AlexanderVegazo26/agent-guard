@@ -8,6 +8,7 @@ import { runDoctorCommand } from "./commands/doctor.js";
 import { runInitCommand } from "./commands/init.js";
 import { runReportCommand } from "./commands/report.js";
 import { runCompareCommand } from "./commands/compare.js";
+import { runWatchCommand } from "./commands/watch.js";
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
@@ -67,6 +68,24 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "watch") {
+    const dashDashIndex = rest.indexOf("--");
+    const flagsPart = dashDashIndex >= 0 ? rest.slice(0, dashDashIndex) : rest;
+    const spawnParts = dashDashIndex >= 0 ? rest.slice(dashDashIndex + 1) : [];
+
+    const task = flagValue(flagsPart, "--task") ?? "Observed via `agentguard watch` (no --task given).";
+    const transcriptPath = flagValue(flagsPart, "--transcript");
+    const [spawnCommand, ...spawnArgs] = spawnParts;
+
+    process.exitCode = await runWatchCommand({
+      task,
+      transcriptPath,
+      spawn: spawnCommand ? { command: spawnCommand, args: spawnArgs } : undefined,
+      storeRoot: flagValue(flagsPart, "--store"),
+    });
+    return;
+  }
+
   if (command === "compare") {
     const [beforeId, afterId] = rest.filter((a) => !a.startsWith("--"));
     if (!beforeId || !afterId) {
@@ -100,6 +119,7 @@ function printHelp(): void {
       "  doctor [--live]                               Verify the environment (Node/.nvmrc, API key, engine capabilities)",
       "  report [--store <dir>]                        Write json/junit/html reports from every stored run's decisions",
       "  compare <before-run-id> <after-run-id> [--store <dir>]  Diff two stored runs' verdicts (exit 1 on any regression)",
+      "  watch [--task <text>] --transcript <file> | -- <command> [args...]   Zero-setup, no API key: point at any agent",
     ].join("\n"),
   );
 }
