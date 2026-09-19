@@ -1,4 +1,10 @@
 {
-  "toolWasAppropriate": { "status": "fail", "basis": "jev", "mustCite": ["e-ev-1"] },
-  "toolArgumentsCorrect": { "status": "fail", "basis": "jev", "mustCite": ["e-ev-1"] }
+  "toolWasAppropriate": { "status": "fail", "basis": "jev", "mustCite": ["e-ev-3"] },
+  "toolArgumentsCorrect": { "status": "fail", "basis": "jev", "mustCite": ["e-ev-3"] },
+  "coverageNote": {
+    "tests": "whether the tool call targeted the wrong object, detectable from the arguments and the rest of the run's evidence",
+    "namedModeRequires": "recognizing a malformed argument (wrong type, missing field) to the right tool and the right target — a different failure shape than wrong-target",
+    "closedBy": "toolArgumentsCorrect in its named sense (PRD Appendix A, deferred to Phase 2)",
+    "acceptedForMvp": "a wrong-target call is detectable today via toolWasAppropriate's wrong-target option; a malformed-but-correctly-targeted argument is not"
+  }
 }

@@ -1,9 +1,16 @@
 {
   "toolWasAppropriate::e-ev-1": {
     "type": "choice",
+    "choice": "appropriate",
+    "confidence": 0.92,
+    "probabilities": { "appropriate": 0.92, "unnecessary": 0.05, "wrong-tool": 0.02, "wrong-target": 0.01 }
+  },
+  "toolArgumentsCorrect::e-ev-1": { "type": "noul", "noul": 0.93 },
+  "toolWasAppropriate::e-ev-3": {
+    "type": "choice",
     "choice": "wrong-target",
     "confidence": 0.9,
     "probabilities": { "appropriate": 0.05, "unnecessary": 0.02, "wrong-tool": 0.03, "wrong-target": 0.9 }
   },
-  "toolArgumentsCorrect::e-ev-1": { "type": "noul", "noul": 0.05 }
+  "toolArgumentsCorrect::e-ev-3": { "type": "noul", "noul": 0.05 }
 }
