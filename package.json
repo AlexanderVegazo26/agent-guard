@@ -23,6 +23,9 @@
     "typescript": "^7.0.2",
     "vitest": "^3.0.0",
     "@types/node": "^26.0.0",
-    "oxlint": "^1.0.0"
+    "oxlint": "^1.0.0",
+    "@agent-guard/core": "workspace:*",
+    "@agent-guard/decision": "workspace:*",
+    "@agent-guard/assertions": "workspace:*"
   }
 }

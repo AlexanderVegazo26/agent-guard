@@ -1,5 +1,5 @@
 import { test as base } from "@playwright/test";
-import { FilesystemRunStore, defineConfig } from "@agent-guard/core";
+import { FilesystemRunStore, loadPolicyConfig, type PolicyConfig } from "@agent-guard/core";
 import { JevDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
 import { AgentGuardFixture } from "./fixture.js";
 
@@ -7,6 +7,8 @@ export interface AgentGuardOptions {
   /** Overrides the decision engine; defaults to the real `JevDecisionEngine`. Tests of AgentGuard itself pass a `MockDecisionEngine` here. */
   agentGuardEngine?: DecisionEngine;
   agentGuardStoreRoot?: string;
+  /** Overrides the loaded policy config outright (PRD2 G0b's tests use this instead of writing a real config file). Defaults to `loadPolicyConfig()`, which reads `agentguard.config.ts` from `process.cwd()` when present. */
+  agentGuardPolicy?: PolicyConfig;
 }
 
 /**
@@ -26,12 +28,14 @@ export interface AgentGuardOptions {
 export const test = base.extend<AgentGuardOptions & { agentguard: AgentGuardFixture }>({
   agentGuardEngine: [undefined, { option: true }],
   agentGuardStoreRoot: [undefined, { option: true }],
+  agentGuardPolicy: [undefined, { option: true }],
 
-  agentguard: async ({ agentGuardEngine, agentGuardStoreRoot }, use, testInfo) => {
+  agentguard: async ({ agentGuardEngine, agentGuardStoreRoot, agentGuardPolicy }, use, testInfo) => {
     const engine = agentGuardEngine ?? new JevDecisionEngine();
     const store = new FilesystemRunStore(agentGuardStoreRoot);
     const runId = testInfo.testId;
-    const fixture = new AgentGuardFixture(runId, engine, store, defineConfig());
+    const policy = agentGuardPolicy ?? (await loadPolicyConfig()).policy;
+    const fixture = new AgentGuardFixture(runId, engine, store, policy);
     await use(fixture);
     await fixture.dispose();
   },

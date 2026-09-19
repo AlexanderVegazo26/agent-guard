@@ -4,7 +4,7 @@ import * as net from "node:net";
 import type { Duplex } from "node:stream";
 import * as tls from "node:tls";
 import selfsigned from "selfsigned";
-import type { FaultSpec } from "@agent-guard/core";
+import { DefaultRedactor, type FaultSpec, type Redactor } from "@agent-guard/core";
 
 /**
  * §7 — fault injection and the network proxy. Real implementation: a plain
@@ -64,6 +64,14 @@ export interface HttpFaultProxyOptions {
    * globally to work around this; scope trust to the agent instead.
    */
   upstreamHttpsAgent?: https.Agent;
+  /**
+   * PRD2 G0a: the proxy captures raw request/response headers and bodies —
+   * Authorization headers, cookies, login-endpoint bodies — before an
+   * observer ever sees them. Defaults to a plain `DefaultRedactor()` so
+   * `events()` never returns unredacted secrets, even if a downstream
+   * consumer forgets to redact again.
+   */
+  redactor?: Redactor;
 }
 
 export class HttpFaultProxy implements FaultProxy {
@@ -73,9 +81,11 @@ export class HttpFaultProxy implements FaultProxy {
   private readonly faults: CompiledFault[] = [];
   private readonly recorded: RecordedNetworkEvent[] = [];
   private readonly upstreamHttpsAgent: https.Agent;
+  private readonly redactor: Redactor;
 
   constructor(options: HttpFaultProxyOptions = {}) {
     this.upstreamHttpsAgent = options.upstreamHttpsAgent ?? https.globalAgent;
+    this.redactor = options.redactor ?? new DefaultRedactor();
   }
 
   async start(): Promise<{ port: number; caCert?: Buffer }> {
@@ -184,7 +194,10 @@ export class HttpFaultProxy implements FaultProxy {
   }
 
   private record(event: RecordedNetworkEvent): void {
-    this.recorded.push(event);
+    // PRD2 G0a: redact before this ever enters `this.recorded` — the array
+    // `events()` returns to every consumer (the Playwright fixture, and
+    // anything else that drains this proxy) is the only copy that exists.
+    this.recorded.push(this.redactor.redactEvent(event));
   }
 
   private async proxyRequest(

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { DefaultRedactor, type Redactor } from "./redaction.js";
 import type { AgentRun, AssertionResult, Evidence, EvidenceLink } from "./schema.js";
 
 /**
@@ -10,12 +11,18 @@ import type { AgentRun, AssertionResult, Evidence, EvidenceLink } from "./schema
  * evidence with no browser, agent or network (§10.1).
  *
  * Not implemented here: `snapshots/` and `trace/` (no browser capture
- * exists in this build to produce them), and the capture-time redaction
- * guarantee ("every file in this tree is redacted") — this store persists
- * whatever `AgentRun`/`Evidence`/`AssertionResult` it is given verbatim; the
- * caller is responsible for having redacted it first (`@agent-guard/observe`'s
- * `Redactor`), matching TRD §8's "redaction runs at capture, not at compile
- * time" — this store is downstream of that boundary, not a substitute for it.
+ * exists in this build to produce them).
+ *
+ * Redaction is still primarily the caller's job — it runs at capture, not
+ * at compile time (TRD §8; `TranscriptAdapter` and `AgentGuardFixture` both
+ * redact before an event ever reaches here). But PRD2 G0a found that
+ * contract silently unenforced everywhere, so `saveEvidence` now runs the
+ * §5.1 defence-in-depth audit (`Redactor.verify`) before writing and
+ * refuses to write — fail-closed, per `DefaultRedactor`'s own documented
+ * contract — if it finds anything. This is a second check, not a
+ * replacement for redacting at capture: it only sees the mechanical
+ * key-name/pattern rules `verify()` implements, not everything
+ * `redactEvent()` catches (e.g. the login-endpoint whole-body rule).
  */
 
 export interface StoredEvidence {
@@ -25,7 +32,10 @@ export interface StoredEvidence {
 }
 
 export class FilesystemRunStore {
-  constructor(private readonly root: string = path.join(process.cwd(), ".agentguard")) {}
+  constructor(
+    private readonly root: string = path.join(process.cwd(), ".agentguard"),
+    private readonly redactor: Redactor = new DefaultRedactor(),
+  ) {}
 
   private runsRoot(): string {
     return path.join(this.root, "runs");
@@ -67,6 +77,15 @@ export class FilesystemRunStore {
   async saveEvidence(runId: string, evidence: StoredEvidence): Promise<void> {
     const dir = await this.runDirFor(runId);
     if (!dir) throw new Error(`FilesystemRunStore: no run directory found for "${runId}" — call saveRun() first`);
+
+    const audit = this.redactor.verify(evidence.items.map((item) => ({ id: item.id, content: item.content })));
+    if (!audit.clean) {
+      const findings = audit.findings.map((f) => `${f.evidenceId}:${f.rule}`).join(", ");
+      throw new Error(
+        `FilesystemRunStore: refusing to write unredacted evidence for "${runId}" (${audit.findings.length} finding(s): ${findings}) — redact at capture before persisting (PRD2 G0a, TRD §8's fail-closed contract)`,
+      );
+    }
+
     await writeFile(path.join(dir, "evidence.json"), JSON.stringify(evidence, null, 2), "utf8");
   }
 

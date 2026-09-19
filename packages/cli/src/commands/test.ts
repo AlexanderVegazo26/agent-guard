@@ -5,6 +5,7 @@ import {
   appendCalibrationRecords,
   computeExitCode,
   formatConsole,
+  loadPolicyConfig,
   toCalibrationRecord,
   type AssertionResult,
 } from "@agent-guard/core";
@@ -19,6 +20,8 @@ export interface TestCommandOptions {
   storeRoot?: string;
   /** PRD §10.2 — send uncertainty-band REVIEW results to a frontier LLM for a root-cause explanation. Costs a separate API call per REVIEW; needs ANTHROPIC_API_KEY. */
   escalate?: boolean;
+  /** Explicit `--config <path>`, overriding the default search for `agentguard.config.{ts,js,...}` in cwd (PRD2 G0b). */
+  configPath?: string;
 }
 
 /**
@@ -32,6 +35,9 @@ export interface TestCommandOptions {
  * `agentguard calibrate` requires before declaring calibration validated.
  */
 export async function runTestCommand(options: TestCommandOptions): Promise<number> {
+  const { policy, configPath } = await loadPolicyConfig({ path: options.configPath });
+  if (configPath) console.log(`agentguard: using config ${configPath}`);
+
   const fixtures = await loadFixtureSuite(options.fixturesRoot);
   const allResults: Record<string, AssertionResult> = {};
   const store = new FilesystemRunStore(options.storeRoot);
@@ -48,7 +54,7 @@ export async function runTestCommand(options: TestCommandOptions): Promise<numbe
 
   for (const fixture of fixtures) {
     const engine: DecisionEngine = options.live ? new JevDecisionEngine() : new MockDecisionEngine(fixture.mock);
-    let results = await runFixture(fixture, engine);
+    let results = await runFixture(fixture, engine, policy);
 
     const graph = await new DefaultEvidenceCompiler().compile(fixture.run);
 

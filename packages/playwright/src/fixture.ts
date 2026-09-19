@@ -1,6 +1,7 @@
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
   DefaultEvidenceCompiler,
+  DefaultRedactor,
   computeExitCode,
   formatConsole,
   type AgentEvent,
@@ -11,6 +12,7 @@ import {
   type FilesystemRunStore,
   type InjectedFault,
   type PolicyConfig,
+  type Redactor,
 } from "@agent-guard/core";
 import { evaluate } from "@agent-guard/assertions";
 import type { DecisionEngine } from "@agent-guard/decision";
@@ -89,6 +91,11 @@ export class AgentGuardFixture {
     private readonly engine: DecisionEngine,
     private readonly store: FilesystemRunStore,
     private readonly policy: PolicyConfig,
+    // PRD2 G0a: every event captured through this fixture — tool calls,
+    // tool results, and the network events drained from the fault proxy —
+    // used to reach `this.events` (and from there, disk) with no
+    // redaction applied. Defaults to a plain `DefaultRedactor()`.
+    private readonly redactor: Redactor = new DefaultRedactor(),
   ) {}
 
   /** Where a real integration points a browser's proxy launch option / CA trust once a fault has been injected. */
@@ -207,6 +214,7 @@ export class AgentGuardFixture {
 
   private push(draft: EventDraft): void {
     this.seq += 1;
-    this.events.push({ id: `ev-${this.seq}`, timestamp: new Date().toISOString(), seq: this.seq, ...draft } as AgentEvent);
+    const redacted = this.redactor.redactEvent(draft);
+    this.events.push({ id: `ev-${this.seq}`, timestamp: new Date().toISOString(), seq: this.seq, ...redacted } as AgentEvent);
   }
 }

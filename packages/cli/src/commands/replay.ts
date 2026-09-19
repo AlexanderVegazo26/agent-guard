@@ -2,8 +2,8 @@ import {
   DefaultEvidenceCompiler,
   FilesystemRunStore,
   computeExitCode,
-  defineConfig,
   formatConsole,
+  loadPolicyConfig,
   type AssertionId,
 } from "@agent-guard/core";
 import { escalateReviews, evaluate } from "@agent-guard/assertions";
@@ -15,6 +15,8 @@ export interface ReplayCommandOptions {
   live: boolean;
   assertions?: AssertionId[];
   escalate?: boolean;
+  /** Explicit `--config <path>`, overriding the default search for `agentguard.config.{ts,js,...}` in cwd (PRD2 G0b). */
+  configPath?: string;
 }
 
 /**
@@ -42,9 +44,12 @@ export async function runReplayCommand(options: ReplayCommandOptions): Promise<n
     );
   }
 
+  const { policy, configPath } = await loadPolicyConfig({ path: options.configPath });
+  if (configPath) console.log(`agentguard: using config ${configPath}`);
+
   let results;
   try {
-    results = await evaluate(graph, requested, engine, defineConfig());
+    results = await evaluate(graph, requested, engine, policy);
   } catch (err) {
     console.error(`agentguard replay: evaluation failed — ${err instanceof Error ? err.message : String(err)}`);
     return 3;

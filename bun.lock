@@ -8,6 +8,9 @@
         "@typesafe-ai/sdk": "0.6.x",
       },
       "devDependencies": {
+        "@agent-guard/assertions": "workspace:*",
+        "@agent-guard/core": "workspace:*",
+        "@agent-guard/decision": "workspace:*",
         "@types/node": "^26.0.0",
         "oxlint": "^1.0.0",
         "typescript": "^7.0.2",

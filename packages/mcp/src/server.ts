@@ -73,6 +73,12 @@ export class AgentGuardMcpServer {
 
   constructor(options: AgentGuardMcpServerOptions) {
     this.engine = options.engine;
+    // PRD2 G0b: this constructor is synchronous, so it cannot itself
+    // `await loadPolicyConfig()`. A launcher (once one exists — see PRD2
+    // F7/G4, the MCP package currently has no `bin`) should call
+    // `loadPolicyConfig()` itself and pass the result as `options.policy`;
+    // this bare `defineConfig()` is only the fallback for a caller that
+    // doesn't.
     this.policy = options.policy ?? defineConfig();
     this.server = new McpServer({ name: "agentguard", version: "0.1.0" });
     this.registerTools();

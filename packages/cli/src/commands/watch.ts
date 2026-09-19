@@ -6,8 +6,8 @@ import {
   FilesystemRunStore,
   TranscriptAdapter,
   computeExitCode,
-  defineConfig,
   formatConsole,
+  loadPolicyConfig,
   type AssertionId,
 } from "@agent-guard/core";
 import { evaluate } from "@agent-guard/assertions";
@@ -22,6 +22,8 @@ export interface WatchCommandOptions {
   spawn?: { command: string; args: string[] };
   storeRoot?: string;
   assertions?: AssertionId[];
+  /** Explicit `--config <path>`, overriding the default search for `agentguard.config.{ts,js,...}` in cwd (PRD2 G0b). */
+  configPath?: string;
 }
 
 /**
@@ -72,8 +74,11 @@ export async function runWatchCommand(options: WatchCommandOptions): Promise<num
   run.finalOutput = lastOutput.length > 4000 ? `${lastOutput.slice(0, 4000)}…` : lastOutput || undefined;
   const graph = await new DefaultEvidenceCompiler().compile(run);
 
+  const { policy, configPath } = await loadPolicyConfig({ path: options.configPath });
+  if (configPath) console.log(`agentguard: using config ${configPath}`);
+
   const assertions = options.assertions ?? DEFAULT_WATCH_ASSERTIONS;
-  const results = await evaluate(graph, assertions, new NoLiveEngine(), defineConfig());
+  const results = await evaluate(graph, assertions, new NoLiveEngine(), policy);
 
   console.log(formatConsole(run.id, results));
   console.log(

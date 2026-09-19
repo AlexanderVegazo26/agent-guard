@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DefaultRedactor } from "./redaction.js";
 import { TranscriptAdapter, parseCommand } from "./transcriptAdapter.js";
 
 describe("parseCommand", () => {
@@ -71,5 +72,23 @@ describe("TranscriptAdapter — generic, tool-agnostic", () => {
     const run = await adapter.stop();
     expect(run.events.filter((e) => e.type === "tool_call")).toHaveLength(2);
     expect(run.events.filter((e) => e.type === "tool_result")).toHaveLength(2);
+  });
+
+  it("PRD2 G0a: applies a configured redactor to captured command/output before it reaches the run", async () => {
+    // `agentguard watch` runs arbitrary CLI-driven agents; their stdout and
+    // command lines are exactly where a printed API key or token shows up.
+    // Before this fix, `TranscriptAdapter.push()` never called a `Redactor`
+    // at all, so this configuration had no effect on what got written.
+    const redactor = new DefaultRedactor({ secrets: [], extraPatterns: [/sk-live-\S+/] });
+    const adapter = new TranscriptAdapter("watch", redactor);
+    await adapter.start({ task: "Call the API." });
+
+    adapter.captureCommand("curl -H 'Authorization: Bearer sk-live-super-secret-token' https://api.example.com");
+    adapter.captureOutput(JSON.stringify({ apiKey: "sk-live-super-secret-token", status: "ok" }));
+
+    const run = await adapter.stop();
+    const runText = JSON.stringify(run);
+    expect(runText).not.toContain("sk-live-super-secret-token");
+    expect(runText).toContain("<redacted:");
   });
 });

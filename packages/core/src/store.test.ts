@@ -60,6 +60,33 @@ describe("FilesystemRunStore", () => {
     await expect(store.saveEvidence("never-saved", { task: "x", items: [], links: [] })).rejects.toThrow();
   });
 
+  it("PRD2 G0a: refuses to write evidence carrying an unredacted secret-shaped key (fail-closed defence-in-depth audit)", async () => {
+    await store.saveRun(RUN);
+    const evidence = {
+      task: RUN.task,
+      items: [
+        {
+          id: "e-leaky",
+          type: "tool_call" as const,
+          source: "test",
+          // A caller that forgot to redact before persisting — exactly the
+          // gap this audit exists to catch (a raw, un-placeholdered value
+          // under a sensitive key name).
+          content: { apiKey: "sk-live-should-never-reach-disk" },
+          derivedFrom: ["ev-1"],
+          timestamp: "2026-09-20T00:00:00.000Z",
+          seq: 1,
+        },
+      ],
+      links: [],
+    };
+
+    await expect(store.saveEvidence(RUN.id, evidence)).rejects.toThrow(/refusing to write unredacted evidence/);
+
+    // Nothing was written — not a partial/corrupt file.
+    expect(await store.loadEvidence(RUN.id)).toBeNull();
+  });
+
   it("appendEvent is append-only — a crashed run still yields every event written so far", async () => {
     await store.appendEvent(RUN, { id: "ev-1", type: "tool_call" });
     await store.appendEvent(RUN, { id: "ev-2", type: "tool_result" });

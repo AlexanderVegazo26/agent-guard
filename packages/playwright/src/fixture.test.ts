@@ -173,4 +173,81 @@ describe("AgentGuardFixture", () => {
     await fixture.dispose();
     await upstream.close();
   });
+
+  it("PRD2 G0a: redacts a secret-shaped tool argument and a proxied Authorization header before anything is persisted", async () => {
+    const upstream = await startUpstream();
+
+    const factory: ObservableAgentFactory = (wrap) => {
+      const [clientTransport, serverTransport] = createLinkedPair();
+      const observed = wrap(clientTransport);
+      let proxyPort = 0;
+
+      wireFakeServer(serverTransport, {
+        call_api: async () => {
+          return new Promise((resolve) => {
+            const req = http.request(
+              {
+                host: "127.0.0.1",
+                port: proxyPort,
+                path: `http://127.0.0.1:${upstream.port}/api/data`,
+                method: "GET",
+                headers: { Authorization: "Bearer sk-live-super-secret-token" },
+              },
+              (res) => {
+                let body = "";
+                res.on("data", (c: Buffer) => (body += c.toString("utf8")));
+                res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(body || "{}") }));
+              },
+            );
+            req.end();
+          });
+        },
+      });
+
+      return {
+        run: async (_task: string) => {
+          await new Promise<void>((resolve) => {
+            observed.onmessage = () => resolve();
+            void observed.send({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "tools/call",
+              // A secret-shaped tool argument — the kind an MCP tool call
+              // legitimately carries (e.g. re-authenticating per call).
+              params: { name: "call_api", arguments: { apiKey: "sk-live-super-secret-token" } },
+            });
+          });
+          return { finalOutput: "Fetched the data." };
+        },
+        __setProxyPort: (p: number) => {
+          proxyPort = p;
+        },
+      } as never;
+    };
+
+    const engine = new MockDecisionEngine({});
+    const fixture = new AgentGuardFixture("test-run-redaction", engine, store, defineConfig());
+
+    await fixture.inject.http({ url: "/never-matches", status: 500 }); // starts the proxy without faulting this request
+    const proxyInfo = fixture.proxyInfo();
+
+    const agent = fixture.observe(factory) as unknown as { run: (t: string) => Promise<{ finalOutput: string }>; __setProxyPort: (p: number) => void };
+    agent.__setProxyPort(proxyInfo!.port);
+    await agent.run("Call the API.");
+
+    await fixture.verify({ assertions: ["evidenceSufficient"] });
+
+    const run = await store.loadRun("test-run-redaction");
+    const evidence = await store.loadEvidence("test-run-redaction");
+    const runText = JSON.stringify(run);
+    const evidenceText = JSON.stringify(evidence);
+
+    expect(runText).not.toContain("sk-live-super-secret-token");
+    expect(evidenceText).not.toContain("sk-live-super-secret-token");
+    // The placeholder actually landed, rather than the field having silently vanished.
+    expect(runText).toContain("<redacted:");
+
+    await fixture.dispose();
+    await upstream.close();
+  });
 });

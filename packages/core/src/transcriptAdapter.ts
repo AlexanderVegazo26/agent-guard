@@ -1,4 +1,5 @@
 import { AgentRun, type AgentEvent, type AgentIdentity } from "./schema.js";
+import { DefaultRedactor, type Redactor } from "./redaction.js";
 
 /**
  * The generic transcript adapter — PRD §10's "AgentGuard observes an
@@ -69,7 +70,18 @@ export class TranscriptAdapter {
   protected pending: { callId: string; verb: string } | null = null;
   private started = false;
 
-  constructor(private readonly toolPrefix: string = "cli") {}
+  /**
+   * PRD2 G0a: raw command args (`captureCommand`) and raw process
+   * output (`captureOutput`) reach `this.events` — and from there
+   * `run.json`/`events.jsonl` — with no redaction unless a redactor is
+   * wired in here. Defaults to a plain `DefaultRedactor()`, since a
+   * command-line agent's output is exactly the kind of place a
+   * credential typed on the command line or echoed by a tool ends up.
+   */
+  constructor(
+    private readonly toolPrefix: string = "cli",
+    private readonly redactor: Redactor = new DefaultRedactor(),
+  ) {}
 
   async start(options: TranscriptAdapterOptions): Promise<void> {
     this.runId = `${this.toolPrefix}-run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -147,6 +159,7 @@ export class TranscriptAdapter {
 
   protected push(draft: TranscriptEventDraft): void {
     this.seq += 1;
-    this.events.push({ id: `ev-${this.seq}`, timestamp: new Date().toISOString(), seq: this.seq, ...draft } as AgentEvent);
+    const redacted = this.redactor.redactEvent(draft);
+    this.events.push({ id: `ev-${this.seq}`, timestamp: new Date().toISOString(), seq: this.seq, ...redacted } as AgentEvent);
   }
 }
