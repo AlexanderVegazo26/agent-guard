@@ -3,7 +3,7 @@ import * as https from "node:https";
 import * as net from "node:net";
 import * as tls from "node:tls";
 import selfsigned from "selfsigned";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { HttpFaultProxy } from "./proxy.js";
 
 /**
@@ -235,6 +235,24 @@ describe("HttpFaultProxy", () => {
 
     expect(result.status).toBe(200);
     expect(JSON.parse(result.body)).toEqual({ upstream: "https", path: "/secure/data" });
+  });
+
+  it("PRD2 review fix: releases the per-connection inner server and TLS socket once the request completes, without waiting for stop()", async () => {
+    const upstream = await startHttpsUpstream();
+    cleanups.push(upstream.close);
+    const proxy = new HttpFaultProxy({ upstreamHttpsAgent: new https.Agent({ ca: upstream.caCert }) });
+    const { port, caCert } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    await requestViaHttpsProxy(port, caCert!, "127.0.0.1", upstream.port, "/secure/data");
+
+    // The client's `tlsSocket.on("end", ...)` in `requestViaHttpsProxy`
+    // fires once the server-side response completes and the socket
+    // closes — before this fix, the server-side `innerServer`/`tlsSocket`
+    // pair for this connection was never tracked or released at all, so
+    // this count would grow without bound across many requests and never
+    // return to zero until the whole proxy was stopped.
+    await vi.waitFor(() => expect(proxy.activeMitmConnectionCount()).toBe(0));
   });
 
   it("injects a fault over the MITM'd HTTPS tunnel", async () => {

@@ -49,21 +49,18 @@ export function runDeterministicPrePass(id: AssertionId, graph: EvidenceGraph): 
 function evaluateEvidenceSufficient(graph: EvidenceGraph): AssertionResult {
   const evidenceIds = graph.items.map((e) => e.id);
 
-  // A decided verdict (pass/fail) must cite at least one evidence id (TRD
-  // §6.8); an empty run has literally nothing to cite, so it abstains
-  // rather than "failing" on evidence it doesn't have.
-  if (evidenceIds.length === 0) {
-    return {
-      id: "evidenceSufficient",
-      status: "review",
-      basis: "jev",
-      reviewVia: "structural-gap",
-      missing: ["user_request"],
-      evidence: [],
-      explanation: "the run recorded no evidence at all",
-      durationMs: 0,
-    };
-  }
+  // PRD2 review finding: `DefaultEvidenceCompiler.compile` (graph.ts)
+  // always injects an `e-task` `user_request` item, so `evidenceIds` can
+  // never be empty here — a prior version of this function had an
+  // `evidenceIds.length === 0 → review` branch that could not execute,
+  // dead code masquerading as the "genuinely empty run" case. The
+  // meaningful version of "nothing happened" — a request was recorded but
+  // no other activity followed it — is the `!hasActivity` branch below,
+  // which does execute and is tested (`evidenceSufficient — ... "fails
+  // when only the user_request was recorded, with no other activity"`).
+  // `deterministic.test.ts` asserts this invariant directly so a future
+  // change to the compiler that ever produced a genuinely empty graph
+  // would be caught here, not silently reintroduce a live dead branch.
 
   const hasRequest = graph.byType("user_request").length > 0;
   const hasActivity = graph.items.some((e) => e.type !== "user_request");

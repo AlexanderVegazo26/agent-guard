@@ -82,6 +82,13 @@ export class HttpFaultProxy implements FaultProxy {
   private readonly recorded: RecordedNetworkEvent[] = [];
   private readonly upstreamHttpsAgent: https.Agent;
   private readonly redactor: Redactor;
+  // PRD2 review finding: `handleConnect` used to create a fresh
+  // `http.Server` per CONNECT tunnel and drive it with
+  // `innerServer.emit("connection", tlsSocket)`, but never tracked or
+  // closed either object — `stop()` closed only the outer proxy server.
+  // Tracked here so both a natural connection close and an explicit
+  // `stop()` actually release them.
+  private readonly activeMitmConnections = new Set<{ innerServer: http.Server; tlsSocket: tls.TLSSocket }>();
 
   constructor(options: HttpFaultProxyOptions = {}) {
     this.upstreamHttpsAgent = options.upstreamHttpsAgent ?? https.globalAgent;
@@ -116,7 +123,18 @@ export class HttpFaultProxy implements FaultProxy {
     return [...this.recorded];
   }
 
+  /** Exposed for tests: proves the MITM leak fix actually releases connections, not just that `stop()` doesn't throw. */
+  activeMitmConnectionCount(): number {
+    return this.activeMitmConnections.size;
+  }
+
   async stop(): Promise<void> {
+    for (const entry of this.activeMitmConnections) {
+      entry.innerServer.close();
+      entry.tlsSocket.destroy();
+    }
+    this.activeMitmConnections.clear();
+
     if (!this.server) return;
     await new Promise<void>((resolve) => this.server!.close(() => resolve()));
     this.server = null;
@@ -161,6 +179,16 @@ export class HttpFaultProxy implements FaultProxy {
       const targetUrl = `https://${host}${innerReq.url ?? ""}`;
       void this.proxyRequest(innerReq, innerRes, targetUrl, true, host, upstreamPort);
     });
+
+    const entry = { innerServer, tlsSocket };
+    this.activeMitmConnections.add(entry);
+    const releaseConnection = (): void => {
+      this.activeMitmConnections.delete(entry);
+      innerServer.close();
+    };
+    tlsSocket.on("close", releaseConnection);
+    clientSocket.on("close", releaseConnection);
+
     innerServer.emit("connection", tlsSocket);
   }
 
