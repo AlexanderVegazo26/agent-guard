@@ -62,6 +62,15 @@ function looksLikeError(output: string): boolean {
 
 const SNAPSHOT_VERBS = new Set(["snapshot", "screenshot"]);
 
+// Mirrors `AgentGuardFixture`'s `EventDraft` (fixture.ts): TS cannot
+// discriminate-union-check an object literal against `Omit<AgentEvent, ...>`
+// directly (the `Omit` collapses the discriminant), so `push()` needs its
+// own explicit union of the event shapes this adapter actually produces.
+type EventDraft =
+  | { type: "tool_call"; callId: string; tool: string; arguments: unknown }
+  | { type: "tool_result"; callId: string; success: boolean; result: unknown }
+  | { type: "browser_state"; kind: "snapshot"; url?: string; title?: string; snapshot: unknown };
+
 export class PlaywrightCliAdapter {
   private readonly events: AgentEvent[] = [];
   private seq = 0;
@@ -138,7 +147,7 @@ export class PlaywrightCliAdapter {
     if (!this.started) throw new Error("PlaywrightCliAdapter: start() must be called first");
   }
 
-  private push(draft: Omit<AgentEvent, "id" | "timestamp" | "seq">): void {
+  private push(draft: EventDraft): void {
     this.seq += 1;
     this.events.push({ id: `ev-${this.seq}`, timestamp: new Date().toISOString(), seq: this.seq, ...draft } as AgentEvent);
   }
