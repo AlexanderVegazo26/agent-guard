@@ -4,6 +4,7 @@ import {
   DefaultRedactor,
   computeExitCode,
   formatConsole,
+  languageAdvisory,
   type AgentEvent,
   type AgentRun,
   type AssertionId,
@@ -135,6 +136,8 @@ export class AgentGuardFixture {
     const graph = await new DefaultEvidenceCompiler().compile(run);
     const results = await evaluate(graph, options.assertions, this.engine, this.policy);
     console.log(formatConsole(this.runId, results));
+    const advisory = languageAdvisory(graph);
+    if (advisory) console.log(`\n  ${advisory}`);
 
     await this.persist(run, graph, results);
 

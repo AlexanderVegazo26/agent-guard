@@ -3,6 +3,7 @@ export * from "./graph.js";
 export * from "./policy.js";
 export * from "./configLoader.js";
 export * from "./redaction.js";
+export * from "./languageAdvisory.js";
 export * from "./store.js";
 export * from "./calibration.js";
 export * from "./exitCode.js";

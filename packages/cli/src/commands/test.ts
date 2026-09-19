@@ -5,6 +5,7 @@ import {
   appendCalibrationRecords,
   computeExitCode,
   formatConsole,
+  languageAdvisory,
   loadPolicyConfig,
   toCalibrationRecord,
   type AssertionResult,
@@ -75,6 +76,8 @@ export async function runTestCommand(options: TestCommandOptions): Promise<numbe
     }
 
     console.log(formatConsole(fixture.name, results));
+    const advisory = languageAdvisory(graph);
+    if (advisory) console.log(`\n  ${advisory}`);
 
     await store.saveRun(fixture.run);
     await store.saveEvidence(fixture.run.id, { task: graph.task, items: graph.items, links: graph.links });

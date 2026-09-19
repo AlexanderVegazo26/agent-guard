@@ -7,6 +7,7 @@ import {
   TranscriptAdapter,
   computeExitCode,
   formatConsole,
+  languageAdvisory,
   loadPolicyConfig,
   type AssertionId,
 } from "@agent-guard/core";
@@ -81,6 +82,8 @@ export async function runWatchCommand(options: WatchCommandOptions): Promise<num
   const results = await evaluate(graph, assertions, new NoLiveEngine(), policy);
 
   console.log(formatConsole(run.id, results));
+  const advisory = languageAdvisory(graph);
+  if (advisory) console.log(`\n  ${advisory}`);
   console.log(
     "\n  agentguard watch checks only what code can prove without a decision engine (PRD §7). For semantic checks\n  (did the agent choose the right tool, recover from a failure honestly, ...) run `agentguard test --live`\n  against a properly captured run.\n",
   );
