@@ -15,6 +15,7 @@ import { runReviewListCommand, runReviewRecordCommand } from "./commands/review.
 import { runExportCommand, runVerifyPackCommand } from "./commands/exportPack.js";
 import { runHistoryCommand } from "./commands/history.js";
 import { runTokensCommand } from "./commands/tokens.js";
+import { runValidateLiveCommand } from "./commands/validateLive.js";
 import { runReviewPrCommand } from "./commands/reviewPr.js";
 import { runAuditFixturesCommand } from "./commands/auditFixtures.js";
 
@@ -230,6 +231,19 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "validate-live") {
+    const budgetFlag = flagValue(rest, "--budget");
+    const repeatFlag = flagValue(rest, "--repeat");
+    process.exitCode = await runValidateLiveCommand({
+      fixturesRoot: flagValue(rest, "--fixtures") ?? path.join(process.cwd(), "fixtures", "golden"),
+      budget: budgetFlag ? Number(budgetFlag) : NaN,
+      repeat: repeatFlag ? Number(repeatFlag) : NaN,
+      storeRoot: flagValue(rest, "--store"),
+      configPath: flagValue(rest, "--config"),
+    });
+    return;
+  }
+
   if (command === "tokens") {
     const storeRoot = flagValue(rest, "--store");
     // `--store <dir>` is optional and, unlike every other command here, has
@@ -313,6 +327,7 @@ function printHelp(): void {
       "  verify-pack <pack-dir>                         Recompute and check an exported pack's manifest",
       "  history --assertion <id> [--baseline <run-id>] [--store <dir>]   Per-assertion verdict series across stored runs",
       "  tokens [<run-id>] [--store <dir>]              Real input/output token usage per run, from the decision engine's own usage — no more black box",
+      "  validate-live --fixtures <dir> --repeat <n> --budget <usd> [--store <dir>] [--config <path>]   Repeat fixtures against real Jev, record usage/spread, refuses with no budget",
       "  review-pr --base <ref> --head <ref> [--repo <dir>] [--description <text>] [--test-results <path>]   Deterministic coding-agent checks against a real git diff",
       "  audit-fixtures [--fixtures <dir>]              Check every fixture's mustCite ids resolve to real evidence",
       "  watch [--task <text>] [--config <path>] --transcript <file> | -- <command> [args...]   Zero-setup, no API key: point at any agent",
