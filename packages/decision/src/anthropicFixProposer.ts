@@ -1,3 +1,4 @@
+import { resolveAnthropicApiKey } from "@alexvegman/core";
 import type { FixProposerEngine, FixProposerRequest, FixProposerResult } from "./fixProposer.js";
 
 /**
@@ -23,7 +24,7 @@ export class AnthropicFixProposerEngine implements FixProposerEngine {
   private readonly model: string;
 
   constructor(config: AnthropicFixProposerEngineConfig = {}) {
-    const apiKey = config.apiKey ?? process.env.ANTHROPIC_API_KEY;
+    const apiKey = resolveAnthropicApiKey(config.apiKey);
     if (!apiKey) {
       throw new Error(
         "AnthropicFixProposerEngine: no API key was provided. Pass `apiKey` or set the ANTHROPIC_API_KEY environment variable.",

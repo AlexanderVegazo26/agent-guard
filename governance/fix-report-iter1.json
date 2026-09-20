@@ -1,0 +1,54 @@
+{
+  "schema": "fix-report/1",
+  "responds_to": "rev-2026-09-20T13-02-00Z-a1",
+  "commit": "working tree, uncommitted (not committed per task instruction: 'Do not commit')",
+  "fixes": [
+    {
+      "findings_closed": ["OBS-008"],
+      "root_cause": "escalateReviews() had no injectable output mechanism; console.warn was hardcoded, violating OBS-008's requirement that library code emit through an injectable logger rather than writing to stdout/stderr directly.",
+      "change": "packages/assertions/src/escalate.ts (added EscalationLogger interface + optional logger param defaulting to console, replaced the hardcoded console.warn call with logger.warn), packages/assertions/src/escalate.test.ts (added one new test)",
+      "test_added": "packages/assertions/src/escalate.test.ts: \"routes the escalation-failure warning through an injectable logger instead of writing to console directly (OBS-008)\"",
+      "pre_fix_failure": "expected [] to have a length of 1 but got +0 (captured via `bunx vitest run packages/assertions/src/escalate.test.ts`, exit 1, 1 failed / 5 passed)",
+      "post_fix_output": "6 tests passed (`bunx vitest run packages/assertions/src/escalate.test.ts`, exit 0)",
+      "risk": "low - default parameter value (console) preserves exact prior behavior for both existing callers (packages/cli/src/commands/replay.ts, packages/cli/src/commands/test.ts), which pass no 4th argument and therefore still get console.warn. No public call site needed to change.",
+      "collateral_checks": ["API-004 (options/params shape - reviewed: 4th positional param with a default is consistent with the existing 3-positional-param style already in this function; not squeezed through an options object because the existing signature already isn't one, and converting it was out of scope for this fix)", "CQ-001 (typecheck)", "build"]
+    }
+  ],
+  "not_fixed": [
+    {
+      "id": "OBS-008-residual (packages/mcp/src/bin.ts, packages/playwright/src/fixture.ts)",
+      "reason": "Genuine scope-classification question (is an MCP server bin entrypoint or a Playwright test fixture 'library' code under OBS-008, or entrypoint/harness code that's exempt the way CLI is?) that the doc's §1 capability list doesn't resolve. Per F-5, stopping and escalating rather than guessing.",
+      "proposal": "Human maintainer decides whether OBS-008's 'library code' language should be read to include packages/mcp (a published bin, arguably CLI-equivalent) and the test-only packages/playwright fixture; then re-run this one check."
+    },
+    {
+      "id": "the remaining ~262 unevaluated checks in the registry",
+      "reason": "Session time budget. Not fixed because not yet evaluated with evidence -- fixing without a §0.5-grade finding would itself be an integrity violation (fabricating a fix for a check never actually run). Named explicitly in the ReviewReport's not_evaluated count rather than silently omitted.",
+      "proposal": "A follow-up iteration should continue Appendix D's pass order from step 2 (build/lint/test are already green) into step 3 (security corpora, coverage) and step 4 (RM/LP/AF behavioral reads), since those hold the BLOCKER-class checks that matter most and haven't been touched yet."
+    },
+    {
+      "id": "L-5 clean-checkout final sweep",
+      "reason": "Two other agents are concurrently editing this working tree (packages/core/configLoader.ts and dependency-pinning changes across root + 4 package.json files, plus a separate packages/toolsmith-* effort). A `git clean -xdf` or fresh clone-based sweep would destroy their uncommitted work. engineering-integrity §8 forbids whole-tree operations on a shared tree under these conditions.",
+      "proposal": "Escalate to human maintainer: schedule the L-5 clean-checkout sweep for after the other two agents' work is committed, in a separate clone or worktree, not in this shared tree."
+    }
+  ],
+  "objections": [],
+  "diff_stat": "2 files changed (packages/assertions/src/escalate.ts, packages/assertions/src/escalate.test.ts), 1 new interface, 1 changed call site, 1 new test (~20 lines added)",
+  "integrity_declaration": {
+    "tests_deleted_or_skipped": [],
+    "suppressions_added": [],
+    "thresholds_changed": [],
+    "config_excludes_changed": []
+  },
+  "escalations": [
+    {
+      "trigger": "0.9: check as written is impossible given current architecture / session constraint",
+      "detail": "L-5 (clean-checkout final sweep) cannot be performed this session without violating a shared-working-tree safety rule (two other agents mid-edit). No amendment to the doc is proposed -- the requirement itself is correct; the constraint is this session's environment, not the check. Recorded as an open precondition, not silently skipped.",
+      "smallest_decision_needed": "Confirm whether to (a) wait for the other two agents to commit and re-run this governance sweep in a clean worktree, or (b) accept a documented exception to L-5 for this release cycle with a human sign-off, per the doc's own human-approval mechanism (§0.8's spirit, though L-5 itself has no waiver field defined -- another possible amendment for the human maintainer to consider, not made by me per INT-008)."
+    },
+    {
+      "trigger": "0.9: architecture-level scope question outside my remit",
+      "detail": "npm-specific §5 commands (npm ci, npm audit, npm pack, @arethetypeswrong/cli) have no bun-native equivalent defined anywhere in this repo's scripts. §1 has no capability row addressing package-manager choice.",
+      "smallest_decision_needed": "A human/solution-architect decision on whether to (a) add bun-equivalent scripts (bun pm ls/bunx equivalents) that satisfy the same intent, or (b) record a §1 scope note that this package is bun-only and amend §5's command set accordingly. I did not amend §5 myself (INT-008)."
+    }
+  ]
+}

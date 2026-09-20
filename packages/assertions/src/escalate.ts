@@ -32,10 +32,15 @@ import { buildUnionState } from "./state.js";
  * must never yield PASS") is about verdicts; escalation produces no
  * verdict, so its failure mode is "less helpful," never "wrong."
  */
+export interface EscalationLogger {
+  warn(message: string): void;
+}
+
 export async function escalateReviews(
   graph: EvidenceGraph,
   results: Record<string, AssertionResult>,
   engine: EscalationEngine,
+  logger: EscalationLogger = console,
 ): Promise<Record<string, AssertionResult>> {
   const out: Record<string, AssertionResult> = { ...results };
 
@@ -57,7 +62,7 @@ export async function escalateReviews(
       });
       out[id] = { ...result, basis: "escalated", explanation };
     } catch (err) {
-      console.warn(`agentguard: escalation failed for "${id}" — leaving it as an unexplained REVIEW (${err instanceof Error ? err.message : String(err)})`);
+      logger.warn(`agentguard: escalation failed for "${id}" — leaving it as an unexplained REVIEW (${err instanceof Error ? err.message : String(err)})`);
     }
   }
 

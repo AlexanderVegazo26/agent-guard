@@ -1,5 +1,5 @@
 {
-  "name": "@alexvegman/core",
+  "name": "@alexvegman/toolsmith-engine",
   "version": "0.1.0",
   "private": false,
   "license": "MIT",
@@ -16,11 +16,6 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@opentelemetry/api": "1.9.1",
-    "@opentelemetry/exporter-trace-otlp-http": "0.222.0",
-    "@opentelemetry/resources": "2.11.0",
-    "@opentelemetry/sdk-trace-base": "2.11.0",
-    "@opentelemetry/semantic-conventions": "1.43.0",
-    "zod": "3.25.76"
+    "@alexvegman/toolsmith-core": "0.1.0"
   }
 }

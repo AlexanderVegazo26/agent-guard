@@ -1,0 +1,196 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "2026-09-20T17:26:00Z-iter2",
+  "iteration": 2,
+  "spec_sha256": "5325f44a826c83311bf0056a2ae10f933c3deb2cfb9564049caba79381b5824d",
+  "commit": "34891eacd50ebccf5dd6f6d7d80ef69c9f49f38d",
+  "toolchain": {
+    "node": "v26.1.0",
+    "npm": "12.0.2",
+    "bun": "1.3.13",
+    "gitleaks": "8.21.2 (direct binary download, bunx resolution failed)",
+    "publint": "run via bunx",
+    "arethetypeswrong": "run via bunx"
+  },
+  "spec_gaps": [
+    "docs/security-check.md defines a checklist header table (§6) listing 20 domain prefixes (SUP..GOV) but the file body only defines checks for SUP, PKG, and API (31 checks total). §7-§11 referenced by the doc's own text do not exist. Recorded as an Info item for the Human Gatekeeper to close via a §11 amendment. Not authored by either agent role.",
+    "Independent reviewer noted a scope/system-description mismatch: §1.1/§2.1 describe a live intercept-validate-autofix-execute pipeline; the actual codebase is predominantly a post-hoc transcript auditor with exactly one live pre-execution control (packages/observe/src proxy guard). This explains why API-004/006/008 map awkwardly onto the real code. Recommend a §11 amendment to the system description rather than treating this as a code defect."
+  ],
+  "summary": {
+    "checks_total": 31,
+    "passed": 12,
+    "failed": 6,
+    "skipped_not_applicable": 2,
+    "skipped_unverified": 8,
+    "waived": 0,
+    "fixed_this_iteration": 4,
+    "by_severity_open": { "critical": 0, "high": 1, "medium": 3, "low": 0, "info": 0 }
+  },
+  "gate": {
+    "decision": "BLOCK",
+    "reasons": [
+      "API-003 only partially fixed: packages/core/src/observability.ts:45 still reads process.env.OTEL_EXPORTER_OTLP_ENDPOINT directly",
+      "API-009 (AbortSignal/cancellation) still fully open",
+      "SUP-002/SUP-003 still open: npm-based install/audit path fundamentally broken on this bun-only tree (workspace:* protocol, no package-lock.json) — needs a §11 amendment or a real fix, neither Engineer role may silently swap the verify tool",
+      "PKG-004/SUP-008 still open: no CI publish workflow, no provenance, no SBOM",
+      "8 checks remain skipped_unverified — §5.5 requires zero",
+      "§5.9 (npm ci --ignore-scripts on clean checkout) still fails"
+    ]
+  },
+  "findings": [
+    {
+      "fingerprint": "sha256(API-003|packages-core-observability|process-env-still-open)",
+      "check_id": "API-003",
+      "title": "One of four original API-003 hits remains open after the iteration-1 fix",
+      "severity": "high",
+      "status": "open",
+      "location": { "path": "packages/core/src/observability.ts", "symbol": null, "line_hint": 45 },
+      "evidence": "The Engineer Agent's iteration-1 fix closed anthropicDecision.ts, anthropicEscalation.ts, and anthropicFixProposer.ts (now route through configLoader.ts's resolveAnthropicApiKey()) — verified by the independent reviewer: zero process.env reads remain in those three files. observability.ts:45 (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) was not in that fix's scope and still reproduces exactly as originally reported. This finding stays open, not fixed, per the independent reviewer's explicit flag: do not let API-003 be marked fully fixed.",
+      "detector": "independent-review re-verification",
+      "introduced_in_iteration": 1,
+      "regression_test_required": true,
+      "regression_test": null,
+      "remediation": "Route the OTLP endpoint default through configLoader.ts the same way the Anthropic API key now is.",
+      "waiver_ref": null
+    },
+    {
+      "fingerprint": "sha256(API-008|packages-core-schema|reason-is-prose-not-code)",
+      "check_id": "API-008",
+      "title": "Denial reason is free-text prose, not an enumerated reason code",
+      "severity": "medium",
+      "status": "open",
+      "location": { "path": "packages/core/src/schema.ts", "symbol": "GuardResult", "line_hint": null },
+      "evidence": "Independent reviewer found a real typed decision: `GuardResult { decision: 'allow'|'block'|'review', reason: string }` with a stable `GuardDecisionKind` enum for `decision`. The `decision` kind is exactly what API-008 wants, but `reason` is free-text prose, not an enumerated reason code — API-008's Pass criterion is 'enumerated reason codes, stable, documented,' which this does not meet for the reason field.",
+      "detector": "independent-review (new finding, not in iteration-1 pass)",
+      "introduced_in_iteration": 2,
+      "regression_test_required": true,
+      "regression_test": null,
+      "remediation": "Add a stable `reasonCode` enum alongside the existing free-text `reason` (keep `reason` for human readability, add the code for programmatic handling).",
+      "waiver_ref": null
+    },
+    {
+      "fingerprint": "sha256(SUP-002|package.json|npm-ci-ignore-scripts)",
+      "check_id": "SUP-002",
+      "title": "Project cannot be installed with `npm ci --ignore-scripts` — §5.9 gate requirement fails",
+      "severity": "high",
+      "status": "open",
+      "location": { "path": "package.json", "symbol": "devDependencies", "line_hint": 20 },
+      "evidence": "Unchanged from iteration 1: no package-lock.json exists (bun.lock only); npm ci --ignore-scripts fails ENOLOCK-class. This is an architectural fact of a bun-only monorepo, not something either fix agent can patch without a scope decision.",
+      "detector": "carried forward, re-confirmed",
+      "introduced_in_iteration": 1,
+      "regression_test_required": false,
+      "regression_test": null,
+      "remediation": "Requires a §11 amendment declaring this project bun-only and replacing every npm-centric Verify command with a bun equivalent, or committing a real package-lock.json and dropping workspace:* everywhere — a human/Gatekeeper decision, not a silent Engineer-Agent tool swap.",
+      "waiver_ref": null
+    },
+    {
+      "fingerprint": "sha256(SUP-003|package.json|no-vuln-scan-path)",
+      "check_id": "SUP-003",
+      "title": "No vulnerability scan of the production dependency tree has successfully run",
+      "severity": "high",
+      "status": "open",
+      "location": { "path": "package.json", "symbol": null, "line_hint": null },
+      "evidence": "Unchanged from iteration 1: npm audit fails ENOLOCK; no bun-native or osv-scanner substitute has been wired into CI.",
+      "detector": "carried forward, re-confirmed",
+      "introduced_in_iteration": 1,
+      "regression_test_required": false,
+      "regression_test": null,
+      "remediation": "Add `osv-scanner --lockfile=bun.lock` (or bun's native audit once stable) as a CI step.",
+      "waiver_ref": null
+    },
+    {
+      "fingerprint": "sha256(SUP-008|.github-workflows-ci.yml|no-sbom-step)",
+      "check_id": "SUP-008",
+      "title": "No SBOM is generated in CI",
+      "severity": "medium",
+      "status": "open",
+      "location": { "path": ".github/workflows/ci.yml", "symbol": null, "line_hint": 1 },
+      "evidence": "Unchanged from iteration 1: ci.yml has no SBOM step and no release job.",
+      "detector": "carried forward, re-confirmed",
+      "introduced_in_iteration": 1,
+      "regression_test_required": false,
+      "regression_test": null,
+      "remediation": "Add SBOM generation once a release workflow exists (see PKG-004).",
+      "waiver_ref": null
+    },
+    {
+      "fingerprint": "sha256(PKG-004|.github-workflows|no-publish-workflow-no-provenance)",
+      "check_id": "PKG-004",
+      "title": "No CI publish workflow exists — no provenance attestation is possible",
+      "severity": "high",
+      "status": "open",
+      "location": { "path": ".github/workflows/ci.yml", "symbol": null, "line_hint": 1 },
+      "evidence": "Unchanged from iteration 1. Independent reviewer notes PKG-005 (2FA/trusted publishing) is dependent on this — fix together.",
+      "detector": "carried forward, re-confirmed",
+      "introduced_in_iteration": 1,
+      "regression_test_required": false,
+      "regression_test": null,
+      "remediation": "Add an OIDC trusted-publishing release workflow; retire the local publish token in .env once live.",
+      "waiver_ref": null
+    },
+    {
+      "fingerprint": "sha256(API-009|packages|no-abortsignal-anywhere)",
+      "check_id": "API-009",
+      "title": "No long-running operation accepts an AbortSignal — cancellation is unimplemented",
+      "severity": "medium",
+      "status": "open",
+      "location": { "path": "packages/decision/src", "symbol": null, "line_hint": null },
+      "evidence": "Unchanged from iteration 1: zero AbortSignal usage anywhere in the codebase. Not attempted this iteration (deferred — threading cancellation through the retry chain is a larger change than fit this pass's scope).",
+      "detector": "carried forward, re-confirmed",
+      "introduced_in_iteration": 1,
+      "regression_test_required": true,
+      "regression_test": null,
+      "remediation": "Thread an optional AbortSignal through decision/escalation/fix-proposer call chains; check before each network call and each retry.",
+      "waiver_ref": null
+    }
+  ],
+  "fixed": [
+    {
+      "check_id": "SUP-004",
+      "evidence": "Removed unused @typesafe-ai/sdk (root dependencies) and @alexvegman/reporters, @alexvegman/mutations (root devDependencies), verified via depcheck before removal. Regression test tests/manifestSecurity.test.ts asserts these keys are undefined; verified failing pre-fix, passing post-fix. Note: @typesafe-ai/sdk removal from root also resolves the 'pin at root' portion of SUP-006 (nothing left there to pin)."
+    },
+    {
+      "check_id": "SUP-006",
+      "evidence": "Pinned to exact resolved versions in packages/core (zod 3.25.76, @opentelemetry/* set), packages/mcp/mutations/reporters (zod 3.25.76), packages/decision (@typesafe-ai/sdk 0.6.0). bun.lock regenerated. tests/manifestSecurity.test.ts asserts exact-version regex against each; verified failing pre-fix (`^3.24.0`), passing post-fix."
+    },
+    {
+      "check_id": "API-005",
+      "evidence": "packages/core/src/configLoader.ts: added recursive, WeakSet-guarded deepFreeze() wrapping both the default-config and loaded-file return paths. Independent reviewer confirmed this is a genuine deep freeze, not shallow (spot-checked nested-field mutation attempts throw TypeError). configLoader.test.ts asserts top-level and nested-field mutation attempts throw and values are unchanged; verified failing pre-fix, passing post-fix."
+    },
+    {
+      "check_id": "API-001",
+      "evidence": "New packages/core/src/defaults.secure.test.ts: 5 tests behaviorally asserting DefaultRedactor is the real zero-config default for TranscriptAdapter, FilesystemRunStore, and buildEvidencePack (via the redaction placeholder / fail-closed throw, not a private-field check). Each assertion individually proven capable of failing (swapped default to identity/no-op, watched it go red, restored). Independent reviewer confirmed this reads as legitimate, non-gamed coverage. Explicit scope note: HttpFaultProxy (@alexvegman/observe) and AgentGuardFixture (@alexvegman/playwright) also default to DefaultRedactor per code reading but are not covered by this test file — flagged as deferred, not silently omitted."
+    }
+  ],
+  "skipped_unverified": [
+    { "check_id": "SUP-005", "reason": "Socket/maintainer-count check not run against security-path deps." },
+    { "check_id": "PKG-005", "reason": "npm registry 2FA / trusted-publishing settings cannot be verified without registry admin access; also blocked on PKG-004 (no publish workflow to attach trusted publishing to)." },
+    { "check_id": "PKG-009", "reason": "SECURITY.md deprecation/yank procedure not checked for presence." },
+    { "check_id": "PKG-010", "reason": "Public API version/buildInfo exposure not checked against package.json version." },
+    { "check_id": "API-002", "reason": "Dangerous-option naming convention (unsafe*/dangerously*) not enumerated against the actual public options surface." },
+    { "check_id": "API-004", "reason": "Independent reviewer traced the one real live control (evaluateGuard() in packages/observe/src/mcp.ts) and found it IS fail-closed by code-flow evidence (no try/catch between the guard call and the throw's unreachable-forward path), but no fault-injection TEST exists forcing the throw — the doc's own Verify method requires test evidence specifically. Passed on code evidence per §3.6 but flagged: test evidence is still missing, so leaving as skipped_unverified rather than a clean pass." },
+    { "check_id": "API-006", "reason": "Independent reviewer confirmed no plugin/hook extensibility system exists anywhere in the codebase — should actually be skipped_not_applicable, not unverified. Reclassified below." },
+    { "check_id": "API-010", "reason": "100%-of-public-entry-points runtime validation not exhaustively enumerated per entry point; zod usage is pervasive (partial positive signal) but not confirmed exhaustive." }
+  ],
+  "passed": [
+    { "check_id": "SUP-007", "evidence": "No preinstall/install/postinstall in any project package.json." },
+    { "check_id": "SUP-009", "note": "skipped_not_applicable — no internal/private-only package names exist." },
+    { "check_id": "SUP-001", "evidence": "Independent reviewer: manual fallback since lockfile-lint has no bun.lock support — 0 http:// entries in bun.lock, spot-checked entries carry sha512 integrity hashes. Passed via documented manual check." },
+    { "check_id": "SUP-010", "evidence": "Independent reviewer: grepped for license-header/vendoring signatures across all packages/*/src — zero hits, nothing vendored, no THIRD-PARTY.md needed." },
+    { "check_id": "PKG-001", "evidence": "npm pack --dry-run on all 8 publishable packages: only dist/ (+examples/ for cli) and package.json; explicit files allowlist; no secrets/.env/.git artifacts." },
+    { "check_id": "PKG-002", "evidence": "Independent reviewer: downloaded gitleaks v8.21.2 directly (bunx resolution failed) and ran against full git history (56 commits) — 5 hits, all in *.test.ts files, all confirmed by direct inspection to be synthetic redaction-pattern-library fixtures (AWS's own AKIAIOSFODNN7EXAMPLE, placeholder sk-/ghp_ strings, a fabricated JWT), not real secrets. Also scanned unpacked tarball contents of all 8 packages: 0 leaks. Real tool evidence, was Critical, now a genuine pass." },
+    { "check_id": "PKG-003", "evidence": "None of the 8 publishable package.json files declare lifecycle scripts." },
+    { "check_id": "PKG-006", "evidence": "bun run build completes cleanly; no *.map files; no debugger statements." },
+    { "check_id": "PKG-007", "evidence": "Independent reviewer: publint against all 8 published packages — 'All good!' for each. arethetypeswrong against core showed only a Low-severity CJS/ESM interop note, no errors." },
+    { "check_id": "PKG-008", "evidence": "Independent reviewer: all 8 packages' exports map is exactly {'.': './dist/index.js'}, no wildcards. Direct require() of dist/internal/whatever.js and dist/exec/raw.js both fail (files don't exist)." },
+    { "check_id": "API-006", "evidence": "Independent reviewer: confirmed no plugin/hook extensibility system exists anywhere in the codebase (only match was an unrelated code comment). Correctly not_applicable, reclassified from skipped_unverified." },
+    { "check_id": "API-007", "evidence": "grep -rn \"globalThis\\.\" packages/*/src returns zero hits — no global mutation." }
+  ],
+  "build_evidence": {
+    "command": "bun run build && bun run lint && bun run test",
+    "result": "tsc -b exit 0; oxlint exit 0; vitest 72 files / 536 tests, 0 failed",
+    "baseline_before_this_review": "508 tests / 67 files passing (measured fresh from HEAD before any agent edits)",
+    "delta": "+28 tests, 0 regressions"
+  },
+  "rejected_patches": []
+}

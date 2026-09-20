@@ -1,5 +1,5 @@
 {
-  "name": "@alexvegman/reporters",
+  "name": "@alexvegman/toolsmith-core",
   "version": "0.1.0",
   "private": false,
   "license": "MIT",
@@ -14,9 +14,5 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js"
-  },
-  "dependencies": {
-    "@alexvegman/core": "0.1.0",
-    "zod": "3.25.76"
   }
 }

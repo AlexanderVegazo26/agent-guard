@@ -1,0 +1,108 @@
+{
+  "run_id": "2026-09-20T17:09:00.401Z_agent-guard-v1",
+  "scenario": "local-measurement (no k6; see not_applicable_dimensions for why)",
+  "scope_note": "This report deliberately does not follow docs/performance-check.md's k6/orchestrator model, because agent-guard has no live-traffic orchestrator to load-test. It measures the real, in-scope compute-bound hot paths that do exist (redaction, evidence compilation, the deterministic/mock-backed assertion pipeline, and the fault-injection proxy's network overhead), using real repo fixtures. See not_applicable_dimensions for the sections of the source doc that do not apply at this codebase's current scope, and why.",
+  "overall_status": "PASS",
+  "checks": [
+    {
+      "id": "redaction_hot_path_ms",
+      "stage": "S3-adjacent (per-event redaction on capture, not a k6-defined metric)",
+      "status": "PASS",
+      "observed": {
+        "p50": 0.01,
+        "p95": 0.01,
+        "p99": 0.03,
+        "n": 1065
+      },
+      "threshold": {
+        "p99": 5
+      },
+      "severity": "n/a",
+      "note": "Proposed threshold, not confirmed: doc's tool_validate_ms (p99<50ms) is the closest analog for a cheap per-event synchronous check. redactEvent is documented as running 'on the hot path' at capture time (redaction.ts)."
+    },
+    {
+      "id": "evidence_graph_compile_ms",
+      "stage": "S3 (closest analog: tool-call parse/validate/dispatch)",
+      "status": "PASS",
+      "observed": {
+        "p50": 0.01,
+        "p95": 0.02,
+        "p99": 0.03,
+        "n": 336
+      },
+      "threshold": {
+        "p95": 50
+      },
+      "severity": "n/a",
+      "note": "Proposed threshold, not confirmed: mapped from tool_validate_ms's shape (p99<50ms), widened to p95<50ms since this does real graph construction, not pure schema validation."
+    },
+    {
+      "id": "assertion_pipeline_ms",
+      "stage": "S3-S5 compute analog (no LLM call; MockDecisionEngine substitutes the network hop with each fixture's own shipped mock.json script)",
+      "status": "PASS",
+      "observed": {
+        "p50": 0.02,
+        "p95": 0.09,
+        "p99": 0.19,
+        "n": 328
+      },
+      "threshold": {
+        "p95": 25
+      },
+      "severity": "low",
+      "note": "Proposed threshold, not confirmed: this is compute-only pipeline latency (selection/sufficiency/state-building), with the actual LLM round trip (S2, the dominant real-world cost) replaced by a mock — reported separately from network cost, not as a substitute for it."
+    },
+    {
+      "id": "fault_proxy_overhead_ms",
+      "stage": "S4 (tool execution — the one real network-hop-carrying component in this repo)",
+      "status": "PASS",
+      "observed": {
+        "direct_p95": 0.78,
+        "via_proxy_p95": 1.2,
+        "overhead_p95_ms": 0.42
+      },
+      "threshold": {
+        "overhead_p95_ms": 50
+      },
+      "severity": "n/a",
+      "note": "Measured against the doc's tool_reinject_ms intent (p95<100ms, serialization/re-injection overhead), scoped down to just the proxy hop since this proxy is a dev/test fault-injection harness (packages/observe), not a production traffic path. Localhost-only, plain HTTP; HTTPS MITM path exists but is not separately measured here (see not_applicable notes)."
+    }
+  ],
+  "not_applicable_dimensions": [
+    {
+      "id": "S1_ingress_throughput",
+      "dimension": "3.2 Throughput & Concurrency (vus_sustained, orchestrator_queue_depth)",
+      "reason": "No agent orchestrator/ingress process exists in this repo. agent-guard is a transcript-analysis library (core/assertions/decision), CLI, MCP server, and a dev/test fault-injection HTTP proxy (observe) — not a runtime that receives concurrent live agent-session requests. There is nothing to ramp VUs against."
+    },
+    {
+      "id": "S2_llm_provider_latency",
+      "dimension": "3.1 Latency (llm_ttft_ms, llm_completion_ms, llm_itl_ms) and 3.4 (tokens_per_task, cost_per_task_usd against a live provider)",
+      "reason": "This package calls Anthropic only via decision/src/anthropicDecision.ts et al. (explicitly out of scope for this review per task constraints) as a client, on demand, per-transcript-analysis-call — not as a sustained-throughput dependency of a running service. Live-provider load testing would require production API keys and real spend against a shared account; that is a stress/soak/breakpoint test against a third party's rate limits, not this codebase's own bottleneck, and is not something to run without explicit budget/blast-radius confirmation this task did not grant."
+    },
+    {
+      "id": "S1_S4_concurrency_pool_limits",
+      "dimension": "3.2 (tool_inflight_max, http_pool_saturation_pct) and 3.5 (breakpoint_vus, spike_recovery_s, soak_latency_drift_pct)",
+      "reason": "These require a long-running stateful service under sustained concurrent load (breakpoint/spike/soak k6 executors). agent-guard's runtime components (CLI commands, MCP tool calls) are short-lived, single-invocation processes; there is no persistent process to soak-test for memory leaks or drift, and no connection pool of the kind these metrics assume."
+    },
+    {
+      "id": "S3_S6_chain_and_hallucination_metrics_against_live_traffic",
+      "dimension": "3.3 (tool_hallucination_rate, tool_duplicate_exec_rate under load), 3.6 (fanout_speedup_ratio, tool_order_violation_count under concurrency)",
+      "reason": "These are correctness-under-load metrics for a live agent processing real tool calls concurrently. agent-guard evaluates already-recorded transcripts after the fact (or observes one session at a time via the MCP server / proxy); it does not itself execute concurrent agent turns whose ordering or fan-out could be measured this way. The closest real analog (fan-out calibration in the assertions pipeline) is already covered by existing unit tests (fanoutCalibration.test.ts), not a load test."
+    },
+    {
+      "id": "k6_infrastructure_and_loop_controller",
+      "dimension": "Sections 4, 6, 7 (k6 scenario files, perf/k6/*, npx <pkg> loop/analyze/verify CLI, CI wiring)",
+      "reason": "Building this would mean scaffolding an entire k6 test suite and loop-controller CLI against a load-bearing HTTP endpoint that does not exist in this repo, purely to satisfy the doc's shape. Per task instructions, that is exactly the kind of fabricated infrastructure to avoid; recorded here as not-applicable-at-current-scope rather than built."
+    }
+  ],
+  "summary": {
+    "total_checks": 4,
+    "passed": 4,
+    "failed": 0,
+    "not_applicable": 5,
+    "failed_ids": []
+  },
+  "diff_from_previous_run": {
+    "note": "This is the first run recorded under perf/reports/history/ — no prior baseline exists yet to diff against."
+  }
+}

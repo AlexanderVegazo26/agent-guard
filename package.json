@@ -16,9 +16,6 @@
     "lint": "oxlint .",
     "agentguard": "node packages/cli/dist/index.js"
   },
-  "dependencies": {
-    "@typesafe-ai/sdk": "0.6.x"
-  },
   "devDependencies": {
     "typescript": "^7.0.2",
     "vitest": "^3.0.0",
@@ -26,8 +23,6 @@
     "oxlint": "^1.0.0",
     "@alexvegman/core": "workspace:*",
     "@alexvegman/decision": "workspace:*",
-    "@alexvegman/assertions": "workspace:*",
-    "@alexvegman/reporters": "workspace:*",
-    "@alexvegman/mutations": "workspace:*"
+    "@alexvegman/assertions": "workspace:*"
   }
 }

@@ -54,7 +54,7 @@ export async function loadPolicyConfig(options: LoadPolicyConfigOptions = {}): P
   const configPath = options.path ? path.resolve(cwd, options.path) : findConfigFile(cwd);
 
   if (!configPath) {
-    return { policy: defineConfig(), configPath: null };
+    return { policy: deepFreeze(defineConfig()), configPath: null };
   }
   if (!existsSync(configPath)) {
     throw new Error(`agentguard: config file not found at "${configPath}"`);
@@ -73,7 +73,24 @@ export async function loadPolicyConfig(options: LoadPolicyConfigOptions = {}): P
     );
   }
 
-  return { policy: defineConfig(mod.default as Partial<PolicyConfig>), configPath };
+  return { policy: deepFreeze(defineConfig(mod.default as Partial<PolicyConfig>)), configPath };
+}
+
+/**
+ * API-003 — the single documented opt-in default for `ANTHROPIC_API_KEY`.
+ * `anthropicDecision.ts`, `anthropicEscalation.ts` and `anthropicFixProposer.ts`
+ * each used to read `process.env.ANTHROPIC_API_KEY` directly at construction,
+ * meaning the ambient-env fallback was duplicated across three execution-path
+ * modules instead of living in one place. Those three modules now call this
+ * function instead of touching `process.env` themselves, so there is exactly
+ * one place in the codebase where that fallback is resolved.
+ *
+ * `explicit` (the caller-supplied `config.apiKey`) always wins; the env var
+ * is consulted only when no explicit key was given, matching the previous
+ * per-module behavior exactly.
+ */
+export function resolveAnthropicApiKey(explicit?: string): string | undefined {
+  return explicit ?? process.env.ANTHROPIC_API_KEY;
 }
 
 function findConfigFile(cwd: string): string | null {
@@ -82,4 +99,33 @@ function findConfigFile(cwd: string): string | null {
     if (existsSync(candidate)) return candidate;
   }
   return null;
+}
+
+/**
+ * API-005 — nothing stopped a caller from mutating the loaded policy after
+ * the fact (e.g. `policy.uncertaintyBand[0] = 0`), silently invalidating
+ * the Score/Choice thresholds `defineConfig` just validated. Freezes every
+ * plain object and array reachable from `value`, recursively, so a mutation
+ * attempt either throws (strict mode) or is a silent no-op — either way the
+ * value itself never changes after this returns.
+ *
+ * Deliberately does not freeze non-plain objects (e.g. `RegExp`, class
+ * instances) since `PolicyConfig` doesn't currently hold any and freezing
+ * an arbitrary instance can break its own methods; if a future field adds
+ * one, this walks past it unfrozen rather than corrupting it.
+ */
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || typeof value !== "object") return value;
+  if (seen.has(value as object)) return value;
+  seen.add(value as object);
+
+  if (Array.isArray(value)) {
+    for (const item of value) deepFreeze(item, seen);
+  } else if (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null) {
+    for (const key of Object.keys(value as object)) {
+      deepFreeze((value as Record<string, unknown>)[key], seen);
+    }
+  }
+
+  return Object.freeze(value);
 }

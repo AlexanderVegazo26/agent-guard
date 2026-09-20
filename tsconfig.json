@@ -26,6 +26,8 @@
     { "path": "packages/observe" },
     { "path": "packages/playwright" },
     { "path": "packages/mcp" },
-    { "path": "packages/cli" }
+    { "path": "packages/cli" },
+    { "path": "packages/toolsmith-core" },
+    { "path": "packages/toolsmith-engine" }
   ]
 }

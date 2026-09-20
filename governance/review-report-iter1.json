@@ -1,0 +1,108 @@
+{
+  "schema": "review-report/1",
+  "run_id": "rev-2026-09-20T13-02-00Z-a1",
+  "iteration": 1,
+  "commit": "34891ea (working tree dirty; see deviations)",
+  "clean_checkout": false,
+  "scope": "partial",
+  "deviations_from_protocol": [
+    "0.1: Reviewer and Engineer are the same context/agent in this run (single autonomous session, no way to enforce separate contexts). Self-review is not review per the doc's own words; this report and its findings should be treated as a self-assessment pending independent re-check.",
+    "0.2 L-5: final sign-off sweep must be from a clean checkout (fresh clone or git clean -xdf). This tree has two other agents concurrently editing (packages/core/configLoader.ts, decision/*, root+package.json for several packages, and a separate packages/toolsmith-* effort). Running git clean/reset here would destroy their uncommitted work, which engineering-integrity §8 forbids. No clean-checkout sweep was performed or attempted. Sign-off (§0.4/§6) is therefore NOT reachable this iteration and is not claimed.",
+    "4.1 evaluated count: this is a partial-scope report by necessity (see above), not a full sweep. Per the doc, evaluated must equal 289 for scope:full; this report is honestly scoped as partial."
+  ],
+  "summary": {
+    "total_checks_in_registry": 289,
+    "evaluated_with_evidence": 27,
+    "not_evaluated": 262,
+    "pass": 19,
+    "fail_observed": 4,
+    "waived": 0,
+    "na": 4,
+    "by_severity_of_observed_fail": { "blocker": 0, "major": 1, "minor": 1, "advisory": 0, "info_not_gated": 2 }
+  },
+  "gates": {
+    "blocker_zero_among_evaluated": true,
+    "major_zero_among_evaluated": false,
+    "all_checks_evaluated": false,
+    "commands_green": "partial - see commands[]"
+  },
+  "baseline_measured_this_session": {
+    "before_any_fix": { "cmd": "bunx vitest run", "test_files": 67, "tests": 508, "exit": 0 },
+    "note": "This baseline was captured by me, in this tree, before any change, per engineering-integrity #1.9. A second, unrelated agent added tests/manifestSecurity.test.ts and additional history.test.ts cases to the tree during this session (test count rose to 519 between my baseline and my post-fix run), producing 10 failures in files I do not own (tests/manifestSecurity.test.ts, packages/reporters/src/history.test.ts). Those failures pre-date and are unrelated to my one fix (packages/assertions/src/escalate.ts + escalate.test.ts, which pass 6/6 both before and after). They reflect the other agent's mid-edit root-package.json dependency pinning work, not a regression I introduced."
+  },
+  "findings": [
+    {
+      "id": "OBS-008",
+      "severity": "MAJOR",
+      "title": "Library code wrote directly to console instead of an injectable logger",
+      "where": "packages/assertions/src/escalate.ts:60 (pre-fix)",
+      "observed": "escalateReviews() called console.warn(...) directly in its catch branch on escalation failure.",
+      "required": "Library code never writes to stdout/stderr directly; it emits through an injectable logger. CLI owns console output.",
+      "impact": "A consumer embedding @alexvegman/assertions (e.g. inside another agent's process, or a test harness capturing stdout) cannot redirect, suppress, or assert on this diagnostic without monkey-patching global console.",
+      "fix_hint": "Add an optional injectable logger parameter defaulting to console to preserve current behavior.",
+      "verify": "bunx vitest run packages/assertions/src/escalate.test.ts",
+      "evidence": { "type": "command", "cmd": "grep -rln \"console\\.\" packages/*/src | grep -v .test.ts | grep -v /cli/", "excerpt": "packages/assertions/src/escalate.ts; packages/mcp/src/bin.ts; packages/playwright/src/fixture.ts; packages/reporters/src/index.ts (index.ts hit was a re-export of console.ts, not an actual console.* call)" },
+      "status": "FIXED_THIS_ITERATION",
+      "tags": []
+    },
+    {
+      "id": "OBS-008-residual",
+      "severity": "MINOR",
+      "title": "Two further direct-console call sites not fixed this iteration (scope containment)",
+      "where": "packages/mcp/src/bin.ts, packages/playwright/src/fixture.ts",
+      "observed": "grep -rln \"console\\.\" packages/*/src (excluding tests and the cli package) also flags these two files.",
+      "required": "Library code never writes to stdout/stderr directly.",
+      "impact": "Same class of defect as OBS-008 above; lower impact because bin.ts is an MCP server entrypoint (arguably CLI-equivalent) and fixture.ts is a Playwright test fixture (arguably test-harness-equivalent), which the doc's C1-C8 scope list does not explicitly classify one way or the other.",
+      "fix_hint": "Reviewer/human should decide whether these two count as 'library' (OBS-008 applies) or 'entrypoint/harness' (out of scope) before an Engineer fixes them, to avoid re-litigating the same judgment call twice.",
+      "verify": "grep -n \"console\\.\" packages/mcp/src/bin.ts packages/playwright/src/fixture.ts",
+      "evidence": { "type": "command", "cmd": "grep -rln \"console\\.\" packages/*/src | grep -v .test.ts | grep -v /cli/" },
+      "status": "NOT_FIXED - scope judgment call, not a code fix; escalating the classification question rather than guessing",
+      "tags": []
+    },
+    {
+      "id": "SUP-001/NPM-012 (pre-existing, not caused by me)",
+      "severity": "info_not_gated",
+      "title": "tests/manifestSecurity.test.ts and packages/reporters/src/history.test.ts failing at time of this sweep",
+      "where": "tests/manifestSecurity.test.ts (10 assertions), packages/reporters/src/history.test.ts (1 assertion, part of the 10)",
+      "observed": "bunx vitest run: 10 failing tests across these 2 files, captured via direct exit-code check (not piped) at 13:09 local. Root cause per the test names: root package.json still lists @typesafe-ai/sdk and two @alexvegman/* devDependencies the tests expect removed as unused, and several packages/*/package.json deps (zod, @opentelemetry/*, @typesafe-ai/sdk) are still range-pinned where the test expects exact pins.",
+      "required": "n/a to this governance doc directly, but overlaps SUP-008/NPM-007 (dependency discipline) and SUP-002-ish exact-pin intent.",
+      "impact": "None attributable to my change — confirmed by running only packages/assertions/src/escalate.test.ts in isolation (6/6 pass) and by the fact these failing files are outside anything I touched.",
+      "fix_hint": "N/A - this is explicitly another agent's declared in-flight work per the task brief (root package.json + packages/core|mcp|mutations|reporters/package.json pinning). Not fixed here per engineering-integrity §8: a red check in a file you don't own is not yours to fix.",
+      "verify": "bunx vitest run tests/manifestSecurity.test.ts packages/reporters/src/history.test.ts",
+      "status": "NOT_MINE - reported, not fixed, not counted against this review's pass/fail totals",
+      "tags": ["not-my-scope"]
+    }
+  ],
+  "checks_na": [
+    { "id": "TEST-011", "reason": "§1 C1-C8 scope: no live-model-dependent eval suite exists in this repo (all model calls in tests are MockDecisionEngine/MockEscalationEngine per grep of *.test.ts); nothing to gate." },
+    { "id": "NPM-002/NPM-003", "reason": "package.json declares type:module with no dual CJS build target anywhere in the workspace (all packages are ESM-only, exports map has a single string target, no require condition). Dual-format correctness does not apply because dual format is not shipped; not a scope decision recorded in §1 by me — flagging that this needs a §1 entry from a human, since AWTT/dual-format checks are moot for an ESM-only package by design, but that design choice itself isn't recorded anywhere in §1." },
+    { "id": "SUP-001/NPM-012/SEC-013 (npm-specific commands)", "reason": "Repo uses bun workspaces with bun.lock; there is no package-lock.json, so npm ci / npm audit / npm pack literally cannot run against this repo as written. §5 permits adapting command *names* to the repo's actual tooling, but there is no bun-native equivalent verified to exist in package.json scripts (no 'audit' or 'pack' script defined at all). Recording as fail/escalation, not n/a, per advisor guidance and per §0.4#2 (unevaluated counts as fail) — see fail_unevaluated notes below rather than silently marking n/a." }
+  ],
+  "commands": [
+    { "cmd": "bunx vitest run (baseline, before any change)", "exit": 0, "excerpt": "Test Files 67 passed (67); Tests 508 passed (508)" },
+    { "cmd": "bun run build (tsc -b)", "exit": 0, "excerpt": "no errors" },
+    { "cmd": "bunx oxlint . (v1.83.0)", "exit": 0, "excerpt": "zero output = zero findings" },
+    { "cmd": "bunx vitest run packages/assertions/src/escalate.test.ts (before fix)", "exit": 1, "excerpt": "expected [] to have a length of 1 but got +0 -- confirms new test is capable of failing" },
+    { "cmd": "bunx vitest run packages/assertions/src/escalate.test.ts (after fix)", "exit": 0, "excerpt": "6 tests passed" },
+    { "cmd": "bun run build (after fix)", "exit": 0, "excerpt": "no errors" },
+    { "cmd": "bunx oxlint . (after fix)", "exit": 0, "excerpt": "zero output" },
+    { "cmd": "bunx vitest run (full suite, after fix)", "exit": 1, "excerpt": "Test Files 2 failed | 66 passed (68); Tests 10 failed | 509 passed (519) -- failures isolated to tests/manifestSecurity.test.ts and packages/reporters/src/history.test.ts, neither touched by my change; confirmed pre-existing/other-agent's in-flight state, not a regression from this fix (escalate.test.ts itself: 6/6 both before and after)" },
+    { "cmd": "grep -rnE \"\\beval\\(|new Function\\(|vm\\.runInThisContext\" packages --include=*.ts (excl tests)", "exit": 0, "excerpt": "0 matches -- SEC-003 pass" },
+    { "cmd": "grep -rn \"__proto__\" packages --include=*.ts (excl tests)", "exit": 0, "excerpt": "0 matches -- SEC-008 pass (proto-pollution literal not present; no deep-merge helper reviewed for pollution-safety beyond this grep, so SEC-008 is only partially evidenced)" },
+    { "cmd": "grep -rn \"@ts-ignore\\|@ts-expect-error\\|eslint-disable\\|oxlint-disable\" packages --include=*.ts (excl tests)", "exit": 0, "excerpt": "0 matches -- CQ-001 suppression count 0" },
+    { "cmd": "ls SECURITY.md / CODEOWNERS / .editorconfig / package-lock.json / governance/waivers.yml", "exit": 1, "excerpt": "all missing -- SEC-019 fail, CQ-012 partial fail (CODEOWNERS, .editorconfig missing), waiver register does not exist yet (0.8)" }
+  ],
+  "checks_evaluated_detail": {
+    "pass": ["SEC-003", "CQ-001(suppression-count-only)", "OBS-008(after fix)", "TEST(build-clean)=CQ-001-related", "LICENSE-file-present=NPM-017/LEG partial", "CHANGELOG.md present=NPM-015 file-existence-only", "CONTRIBUTING.md present=CQ-012 partial"],
+    "fail": ["SEC-019 (no SECURITY.md)", "CQ-012 (no CODEOWNERS, no .editorconfig)", "0.8 (no governance/waivers.yml -- expected, none created yet)"],
+    "note": "This is a coarse partial pass; most of the 289-check registry (RM-*, LP-*, AF-*, most of SEC/PRV/TS/TC/TD/RC/PERF/REL/API/CLI/DOC/SUP/LEG) was NOT evaluated this iteration due to session time budget. See not_evaluated count above. Each unevaluated check is 'fail' per §0.4#2, not silently dropped -- listing all 262 by ID here would restate the registry verbatim; they are enumerable directly from docs/governance-check.md §2 minus the 27 named above."
+  },
+  "waivers_active": [],
+  "integrity_pass": {
+    "performed": true,
+    "scope": "git diff on files I touched (packages/assertions/src/escalate.ts, packages/assertions/src/escalate.test.ts) plus a grep sweep of *.test.ts, *.config.*, package.json for suppression/threshold/skip patterns repo-wide",
+    "violations": [],
+    "notes": "No test was deleted, skipped, .only'd, or loosened. No suppression added. No threshold changed. The one new test (escalate.test.ts) was proven capable of failing before the fix (captured above) and passes for the stated reason after. governance-check.md itself was not edited (INT-008 clean)."
+  },
+  "next_action": "engineer_fix (more iterations needed for full registry) / escalate (see escalations below)"
+}

@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "2026-09-20T13:15:00Z-independent-1",
+  "role": "second, independent Reviewer opinion — to be reconciled with security-review-report.json, not to overwrite it",
+  "based_on_report": "security-review-report.json (run_id 2026-09-20T16:52:45Z-iter1)",
+  "commit_reviewed_at_start": "34891eacd50ebccf5dd6f6d7d80ef69c9f49f38d",
+  "note": "packages/core/src/configLoader.ts, anthropicDecision.ts, anthropicEscalation.ts, anthropicFixProposer.ts, and packages/core/src/defaults.secure.test.ts were re-read in their CURRENT state (already modified by the concurrent software-engineer agent) rather than assumed identical to what the first-pass report described. Findings below reflect that current state.",
+
+  "adversarial_re_verification": [
+    {
+      "check_id": "API-005",
+      "first_pass_status": "open (medium) — no Object.freeze anywhere",
+      "current_finding": "RESOLVED, verified by code reading. packages/core/src/configLoader.ts now has a deepFreeze() helper (recursive, WeakSet-guarded against cycles, freezes plain objects and arrays reachable from the config, skips class instances/RegExp deliberately) applied to BOTH the built-in-default path (`deepFreeze(defineConfig())`) and the file-loaded path (`deepFreeze(defineConfig(mod.default...))`). This is a genuine deep freeze, not a shallow Object.freeze(config) that would leave nested objects mutable — I checked specifically for that gap per the task's own hint and it is not present.",
+      "gap_found": "packages/core/src/configLoader.test.ts (also modified) should be checked to confirm it actually asserts a MUTATION ATTEMPT fails on a NESTED field (e.g. policy.someNestedObject.x = 1 either throws in strict mode or is a silent no-op and the value is unchanged), not just that the top-level object is frozen. Did not have time to read that test file's assertions line-by-line in this pass — flagging as a follow-up rather than asserting it passed.",
+      "severity_change": "none — Medium per doc, unchanged"
+    },
+    {
+      "check_id": "API-003",
+      "first_pass_status": "open (high) — process.env read directly in anthropicDecision.ts:45, anthropicEscalation.ts:33, anthropicFixProposer.ts:26, observability.ts:45",
+      "current_finding": "PARTIALLY RESOLVED. The three Anthropic modules no longer read process.env directly — they now call `resolveAnthropicApiKey(explicit)` from packages/core/src/configLoader.ts, which centralizes the ANTHROPIC_API_KEY fallback in one documented location (confirmed by reading configLoader.ts and grepping the three call sites — zero remaining process.env hits in anthropicDecision.ts/anthropicEscalation.ts/anthropicFixProposer.ts). This is a legitimate fix, not a rename-to-evade-fingerprint: the read moved to a genuinely different module boundary.",
+      "gap_found": "packages/core/src/observability.ts:45 (`observabilityEnabled()` — `Boolean(process.env.OTEL_EXPORTER_OTLP_ENDPOINT)`) is UNCHANGED and still a direct process.env read inside an execution-path module (observability.ts is not a config-loading module; it's invoked from the pipeline to decide whether to emit spans). This one instance of API-003 is still open. Recommend the same pattern: thread an `otlpEndpoint`/`enabled` value through configLoader.ts and have observability.ts accept it as a parameter instead of reading env itself, OR — since OTLPTraceExporter itself already reads OTEL_EXPORTER_OTLP_ENDPOINT natively per the module's own doc comment — make observabilityEnabled() take an explicit override with process.env as a documented fallback default resolved at the single wiring call site, matching the resolveAnthropicApiKey pattern.",
+      "severity_change": "none — High per doc, unchanged. Do not close API-003 until observability.ts is fixed too; this is a single check_id/fingerprint, not four independent ones, and one of its four original file:line hits is still reproducible exactly as reported."
+    },
+    {
+      "check_id": "PKG-006",
+      "first_pass_status": "passed — no *.map files, no debugger statements",
+      "current_finding": "Spot-re-verified: `bun run build` completes clean, no .map files under packages/*/dist. Re-confirmed independently, no discrepancy.",
+      "severity_change": "none"
+    },
+    {
+      "check_id": "PKG-001",
+      "first_pass_status": "passed — npm pack --dry-run shows only dist/ + package.json (+examples/ for cli), explicit files allowlist",
+      "current_finding": "Re-verified by actually packing all 8 tarballs (`bun pm pack`) and gitleaks-scanning the unpacked contents (see PKG-002 below) rather than only dry-run-listing them. No discrepancy — packed contents match dist/ output, no stray files.",
+      "severity_change": "none"
+    }
+  ],
+
+  "resolved_from_skipped_unverified": [
+    {
+      "check_id": "PKG-002",
+      "prior_status": "skipped_unverified (critical) — gitleaks unresolvable via bunx",
+      "new_status": "passed",
+      "evidence": "Installed gitleaks v8.21.2 directly (binary download from GitHub releases, bypassing bunx package resolution, which failed): `curl -sL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_windows_x64.zip`, unzipped. Ran `gitleaks detect --source . --redact --log-opts=\"--all\"` against full git history (56 commits scanned) — 5 findings, all in *.test.ts files, all confirmed by direct inspection to be synthetic fixture values used to test the redaction-pattern-library feature itself: `sk-abcdefghijklmnopqrstuvwxyz1234` (placeholder), `AKIAIOSFODNN7EXAMPLE` (AWS's own published example key), `ghp_1234567890abcdefghijklmnopqrstuvwxyz` (placeholder), a JWT with payload `{\"sub\":\"1234567890\"}` (fabricated), `sk_live_abcdef1234567890` (placeholder), and a `curl -H 'Authorization: Bearer ...'` example in a test string. None are live credentials; none are outside test files whose entire purpose is exercising DefaultRedactor's pattern matching. Additionally built all 8 packages, packed real tarballs with `bun pm pack`, unpacked them, and ran `gitleaks detect --no-git --source <unpacked> --redact` against the actual published-artifact contents: 0 leaks found. PKG-002 passes with real tool evidence in both required scopes (git history + tarballs).",
+      "note_for_reconciliation": "The first-pass report correctly refused to mark this passed on the user's verbal confirmation alone (right call per §3.6) — it just hadn't found the direct-binary-download workaround yet. This is a genuine close, not a downgrade of anything; severity stays Critical-class-check but resolves to a real pass."
+    },
+    {
+      "check_id": "PKG-007",
+      "prior_status": "skipped_unverified",
+      "new_status": "passed",
+      "evidence": "Ran `npx publint` against each of the 8 publishable packages after `bun run build`: all 8 report \"All good!\", zero errors. Ran `npx @arethetypeswrong/cli --pack` against packages/core: one Low-severity, non-blocking warning (`CJS require resolves to ESM` — CommonJS consumers need dynamic import; this is an expected consequence of the package being pure ESM, not a defect). No errors on node16/bundler resolution otherwise. This satisfies PKG-007's Pass criterion (\"No errors\") — the ESM/CJS interop note is informational, consistent with the check's own Low severity."
+    },
+    {
+      "check_id": "PKG-008",
+      "prior_status": "skipped_unverified",
+      "new_status": "passed",
+      "evidence": "Inspected the `exports` map in all 8 packages' package.json: every one is exactly `{\".\": \"./dist/index.js\"}` — no wildcard/subpath exports at all. Attempted `require('./packages/core/dist/internal/whatever.js')` and `require('./packages/core/dist/exec/raw.js')` directly (bypassing the exports map entirely, the strongest form of this test): both fail with `Cannot find module` because no such directories/files exist in dist/ in the first place — there is no raw executor or unvalidated dispatcher module to reach. Passes cleanly; no internal-API subpath surface exists to leak."
+    },
+    {
+      "check_id": "SUP-001",
+      "prior_status": "skipped_unverified — lockfile-lint has no bun.lock support",
+      "new_status": "passed (manual fallback, documented per the task's own suggested approach)",
+      "evidence": "lockfile-lint genuinely does not support bun's lockfile format (confirmed: it only parses package-lock.json/yarn.lock/pnpm-lock.yaml JSON/YAML shapes, bun.lock's JSONC-with-trailing-commas format is not one of them). Manual fallback: `grep -c 'http://' bun.lock` = 0 (no insecure registry URLs); spot-checked multiple entries (e.g. `zod@3.25.76`) and confirmed each carries a `sha512-...` integrity hash inline in the tuple, consistent throughout the file's `\"packages\"` section format. bun.lock is committed (not gitignored, confirmed present in git history). This is code evidence per §3.6, not \"I looked and it's fine\" — specific grep counts and a specific hash format check were performed and recorded.",
+      "note_for_reconciliation": "SUP-001's own Verify command is npm-lockfile-lint-specific and doesn't apply to a bun-only project — same underlying tooling gap SUP-002's first-pass finding already flagged. Recommend folding this into the same §11-amendment request rather than treating it as a second, separate tooling gap."
+    },
+    {
+      "check_id": "SUP-010",
+      "prior_status": "skipped_unverified",
+      "new_status": "passed",
+      "evidence": "No THIRD-PARTY.md exists (confirmed absent). Grepped all packages/*/src for common vendoring signatures (`Copyright`, `MIT License`, `Apache License` headers) — zero hits. No unusually large non-authored-looking files found. There is nothing vendored to inventory; SUP-010's Pass criterion (\"every vendored file has an entry\") is vacuously true because the vendored-file set is empty. This is a genuine pass, not an absence of checking — the absence itself was verified by grep, not assumed."
+    }
+  ],
+
+  "still_unresolved_with_reason": [
+    { "check_id": "SUP-005", "reason": "Socket CLI / npm view maintainer-count check against zod, @modelcontextprotocol/sdk, selfsigned, @opentelemetry/* was not run this pass either — no network-registry-metadata tool was available/attempted; would need `npm view <pkg> time.modified` per package, which is mechanical but time-boxed out of this pass." },
+    { "check_id": "PKG-005", "reason": "Cannot be verified without npm registry admin access, as the first pass correctly noted. New observation: PKG-005 (2FA/trusted publishing) is currently moot in practice because PKG-004 already found there is no CI publish workflow at all — there is nothing today that would use trusted publishing even if it were enabled on the registry side. The two findings should be tracked as a single remediation: stand up the OIDC-based release workflow (closes PKG-004) and *at the same time* switch npm's publish requirement from classic-token/2FA to trusted publishing (closes PKG-005), rather than fixing PKG-004 first and coming back to PKG-005 later, since fixing PKG-004 without addressing PKG-005 just recreates a long-lived-secret publishing path inside CI instead of on a laptop." },
+    { "check_id": "API-002", "reason": "Not run this pass — would require enumerating every boolean/relaxation option across all 8 packages' public option types and checking naming convention; time-boxed out." },
+    { "check_id": "API-010", "reason": "Enumerated packages/*/src/index.ts public exports (see below) but did not exhaustively trace every exported function's argument handling to confirm a runtime zod/ajv parse at each one. Partial positive signal stands: zod-based schemas exist in packages/core/src/schema.ts (AssertionStatus, GuardDecisionKind, etc.) and packages/mutations, packages/reporters both depend on zod directly. Not closed." }
+  ],
+
+  "new_findings_not_in_first_pass": [
+    {
+      "check_id": "API-006",
+      "severity": "high (per doc)",
+      "status": "not_applicable — verified, not merely asserted",
+      "finding": "Confirmed by exhaustive grep across all packages/*/src for hook/plugin/middleware extensibility points: the only match for \"hook\" outside test files is a code comment in packages/observe/src/server.ts (\"Test/inspection hook — not an MCP tool\", i.e. a testing utility, not a runtime extensibility mechanism). There is no plugin/middleware system anywhere in this codebase that a third party could register into. API-006 is legitimately not_applicable, not skipped_unverified — the first-pass report had this correctly listed as skipped_unverified pending a check for the hook system's existence; that check is now done and the answer is 'it doesn't exist.'"
+    },
+    {
+      "check_id": "API-008",
+      "severity": "medium (per doc)",
+      "status": "open — partial",
+      "finding": "packages/observe/src/guard.ts's evaluateGuard() DOES return a structured, typed result (`GuardResult = { decision: GuardDecisionKind, reason: string }`, where `GuardDecisionKind = z.enum([\"allow\", \"block\", \"review\"])`, defined in packages/core/src/schema.ts). This is a real, stable, documented decision-kind enum — a materially better answer than 'throws an opaque error or returns empty', which is what API-008 is written to catch. However, the `reason` field is a free-text `string`, not an enumerated, stable reason CODE (e.g. \"tool \\\"x\\\" is on the blocked-tools list\" is human-readable prose, not a code like `BLOCKED_TOOL_NAME` a caller could safely switch on across versions without string-matching). API-008's Pass criterion explicitly asks for 'Enumerated reason codes, stable, documented' — the decision kind meets that; the reason does not. Recommend: add a stable `reasonCode` field (enum) alongside the existing free-text `reason`, so callers get both machine-actionable and human-readable information. This is a Medium finding per the doc's own fixed severity, not newly invented — it should be added to the findings list, not left in skipped_unverified, since real evidence (the actual type definitions) was found.",
+      "evidence_location": "packages/core/src/schema.ts:266-267 (GuardDecisionKind), packages/observe/src/guard.ts:26-45 (GuardResult, evaluateGuard), packages/observe/src/mcp.ts:151-156 (call site, ObservingTransport.send)"
+    },
+    {
+      "check_id": "API-004",
+      "severity": "critical (per doc)",
+      "status": "passed — code evidence only, no fault-injection test exists yet",
+      "finding": "Traced the one live pre-execution control this codebase actually has — evaluateGuard(), called from ObservingTransport.send() in packages/observe/src/mcp.ts:151-159 — for fail-closed behavior on an internal throw. There is no try/catch around the `evaluateGuard()` call or around `this.blockOutbound()`. If evaluateGuard were to throw (e.g. a pathological regex in `blockedArgumentPatterns` throwing, or `safeStringify` throwing on a cyclic args object), the exception propagates out of `send()` before `this.inner.send(message, options)` is ever reached on the next line — meaning a throw in the guard control structurally CANNOT result in the call reaching the real transport. This is genuine fail-closed behavior, verified by code reading (a throw aborts the function before the forwarding call, there is nothing that could catch-and-continue). BUT: no test in packages/observe/src/mcp.test.ts actually forces evaluateGuard/safeStringify to throw and asserts the call was not forwarded — I grepped mcp.test.ts for throw/toThrow/rejects and found no fault-injection case. Per §3.6 this is legitimate Code evidence (I named the specific control-flow reason a catch→proceed can't happen), but it falls short of the Verify method the doc itself specifies (\"Fault-injection tests... assert the call is denied\"). Recommend the software-engineer or qa-engineer add exactly that test before this is closed with Test evidence rather than Code evidence alone.",
+      "note": "This is the SAME check_id the first pass left in skipped_unverified with the reason 'not run or located' — I located the actual control path and evaluated it, so this moves from skipped_unverified to a documented pass-with-caveat, not a fabricated pass."
+    },
+    {
+      "check_id": "GOV-001 / spec-scope (informational, not a numbered checklist item)",
+      "severity": "info",
+      "status": "observation for the Human Gatekeeper",
+      "finding": "docs/security-check.md §1.1 and §2.1 describe the system as a live, synchronous interceptor sitting between model output and tool execution ('Intercepts model-emitted tool calls before execution... Executes or forwards the call'), and its ten attack scenarios (A1-A10) are largely framed around that live-interception model. Reading the actual package boundaries (packages/core = schema/policy/evidence/store, packages/decision = LLM-backed decision/escalation/fix-proposer, packages/assertions = post-hoc transcript assertions, packages/observe = the one place with live interception — proxy.ts, guard.ts, mcp.ts) shows the codebase is predominantly a POST-HOC auditor of already-captured agent transcripts (assertions, evidence packs, calibration, reporters), with exactly one live pre-execution control (`evaluateGuard` in packages/observe) rather than the fully live validate-then-autofix-then-execute pipeline the spec's system description assumes throughout. This does not invalidate any individual finding above, but it explains why several checks (API-006, API-008, API-004) map awkwardly onto the actual code — they were written for a system with a live autofixer 'rewriting calls' (§1.2's central risk framing, A2), and there is currently no autofixer in the live tool-call path at all (AFX-* checks are in the undefined-section gap the first pass already flagged, which may not be a coincidence). Recommend the Human Gatekeeper decide whether docs/security-check.md's system description needs a §11 amendment to match what's actually built, or whether the live-interception surface (packages/observe) is intended to grow to match the spec over time — either is a legitimate answer, but leaving it unstated makes several checks unfalsifiable in either direction."
+    }
+  ],
+
+  "gate_impact_summary": {
+    "moved_from_skipped_unverified_to_passed": ["PKG-002", "PKG-007", "PKG-008", "SUP-001", "SUP-010"],
+    "moved_from_skipped_unverified_to_not_applicable": ["API-006"],
+    "moved_from_skipped_unverified_to_open_finding": ["API-008 (medium, partial — reason field not coded)", "API-004 (see caveat — passed but with a recommended follow-up test, not itself a new blocking finding)"],
+    "existing_open_finding_confirmed_partially_fixed": ["API-003 (still open — observability.ts:45 unaddressed; anthropicDecision/Escalation/FixProposer.ts are fixed)"],
+    "existing_open_finding_confirmed_fully_fixed_pending_test_depth_check": ["API-005 (deep-freeze looks real; did not finish verifying configLoader.test.ts asserts nested-field mutation, not just top-level)"],
+    "remaining_skipped_unverified": ["SUP-005", "PKG-005 (registry access required, tied to PKG-004)", "API-002", "API-010 (partial signal only)"],
+    "net_effect_on_gate": "Still BLOCK. PKG-002 (the one Critical) now has a real pass, which removes it from the blocking critical count if reconciled — but API-003 remains open (High, unchanged), API-004/API-005/API-009 and the SUP/PKG mediums from the first pass are unaffected by this pass except where noted, and skipped_unverified is reduced but not zero (§5.5 still not satisfied). Gate decision should stay BLOCK until: observability.ts's process.env read is fixed (API-003), the API-004 fault-injection test is added, API-005's nested-mutation test coverage is confirmed, and the remaining skipped_unverified items (SUP-005, PKG-005, API-002, API-010) get real evidence or an explicit not_applicable determination."
+  }
+}

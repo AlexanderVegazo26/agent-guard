@@ -1,3 +1,4 @@
+import { resolveAnthropicApiKey } from "@alexvegman/core";
 import type { EscalationEngine, EscalationRequest, EscalationResult } from "./escalation.js";
 
 /**
@@ -30,7 +31,7 @@ export class AnthropicEscalationEngine implements EscalationEngine {
   private readonly model: string;
 
   constructor(config: AnthropicEscalationEngineConfig = {}) {
-    const apiKey = config.apiKey ?? process.env.ANTHROPIC_API_KEY;
+    const apiKey = resolveAnthropicApiKey(config.apiKey);
     if (!apiKey) {
       throw new Error(
         "AnthropicEscalationEngine: no API key was provided. Pass `apiKey` or set the ANTHROPIC_API_KEY environment variable.",

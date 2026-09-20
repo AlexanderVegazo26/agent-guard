@@ -108,4 +108,21 @@ describe("escalateReviews", () => {
 
     expect(escalated.handledAmbiguityCorrectly).toEqual(results.handledAmbiguityCorrectly);
   });
+
+  it("routes the escalation-failure warning through an injectable logger instead of writing to console directly (OBS-008)", async () => {
+    const graph = await buildGraph();
+    const engine = new MockDecisionEngine({ handledAmbiguityCorrectly: { type: "noul", noul: 0.5 } });
+    const results = await evaluate(graph, ["handledAmbiguityCorrectly"], engine, defineConfig());
+
+    const failing = new MockEscalationEngine(() => {
+      throw new Error("network unavailable");
+    });
+    const warnCalls: string[] = [];
+    const logger = { warn: (msg: string) => warnCalls.push(msg) };
+
+    await escalateReviews(graph, results, failing, logger);
+
+    expect(warnCalls).toHaveLength(1);
+    expect(warnCalls[0]).toContain("network unavailable");
+  });
 });

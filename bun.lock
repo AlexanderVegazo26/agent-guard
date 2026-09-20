@@ -4,15 +4,10 @@
   "workspaces": {
     "": {
       "name": "agent-guard",
-      "dependencies": {
-        "@typesafe-ai/sdk": "0.6.x",
-      },
       "devDependencies": {
         "@alexvegman/assertions": "workspace:*",
         "@alexvegman/core": "workspace:*",
         "@alexvegman/decision": "workspace:*",
-        "@alexvegman/mutations": "workspace:*",
-        "@alexvegman/reporters": "workspace:*",
         "@types/node": "^26.0.0",
         "oxlint": "^1.0.0",
         "typescript": "^7.0.2",
@@ -29,7 +24,7 @@
     },
     "packages/cli": {
       "name": "@alexvegman/cli",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "bin": {
         "agentguard": "./dist/index.js",
       },
@@ -45,12 +40,12 @@
       "name": "@alexvegman/core",
       "version": "0.1.0",
       "dependencies": {
-        "@opentelemetry/api": "^1.9.1",
-        "@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
-        "@opentelemetry/resources": "^2.11.0",
-        "@opentelemetry/sdk-trace-base": "^2.11.0",
-        "@opentelemetry/semantic-conventions": "^1.43.0",
-        "zod": "^3.24.0",
+        "@opentelemetry/api": "1.9.1",
+        "@opentelemetry/exporter-trace-otlp-http": "0.222.0",
+        "@opentelemetry/resources": "2.11.0",
+        "@opentelemetry/sdk-trace-base": "2.11.0",
+        "@opentelemetry/semantic-conventions": "1.43.0",
+        "zod": "3.25.76",
       },
     },
     "packages/decision": {
@@ -58,7 +53,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@alexvegman/core": "0.1.0",
-        "@typesafe-ai/sdk": "0.6.x",
+        "@typesafe-ai/sdk": "0.6.0",
       },
     },
     "packages/mcp": {
@@ -74,7 +69,7 @@
         "@alexvegman/observe": "0.1.0",
         "@alexvegman/reporters": "0.1.0",
         "@modelcontextprotocol/sdk": "^1.30.0",
-        "zod": "^3.24.0",
+        "zod": "3.25.76",
       },
     },
     "packages/mutations": {
@@ -82,7 +77,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@alexvegman/core": "0.1.0",
-        "zod": "^3.24.0",
+        "zod": "3.25.76",
       },
     },
     "packages/observe": {
@@ -112,7 +107,18 @@
       "version": "0.1.0",
       "dependencies": {
         "@alexvegman/core": "0.1.0",
-        "zod": "^3.24.0",
+        "zod": "3.25.76",
+      },
+    },
+    "packages/toolsmith-core": {
+      "name": "@alexvegman/toolsmith-core",
+      "version": "0.1.0",
+    },
+    "packages/toolsmith-engine": {
+      "name": "@alexvegman/toolsmith-engine",
+      "version": "0.1.0",
+      "dependencies": {
+        "@alexvegman/toolsmith-core": "0.1.0",
       },
     },
   },
@@ -134,6 +140,10 @@
     "@alexvegman/playwright": ["@alexvegman/playwright@workspace:packages/playwright"],
 
     "@alexvegman/reporters": ["@alexvegman/reporters@workspace:packages/reporters"],
+
+    "@alexvegman/toolsmith-core": ["@alexvegman/toolsmith-core@workspace:packages/toolsmith-core"],
+
+    "@alexvegman/toolsmith-engine": ["@alexvegman/toolsmith-engine@workspace:packages/toolsmith-engine"],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.28.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ=="],
 

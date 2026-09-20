@@ -1,3 +1,4 @@
+import { resolveAnthropicApiKey } from "@alexvegman/core";
 import type { DecisionAnswer, DecisionEngine, DecisionQuestion, DecisionResult, DecisionState, EngineCapabilities, JsonEntry, QuestionSet } from "./engine.js";
 
 /**
@@ -42,7 +43,7 @@ export class AnthropicDecisionEngine implements DecisionEngine {
   private readonly model: string;
 
   constructor(config: AnthropicDecisionEngineConfig = {}) {
-    const apiKey = config.apiKey ?? process.env.ANTHROPIC_API_KEY;
+    const apiKey = resolveAnthropicApiKey(config.apiKey);
     if (!apiKey) {
       throw new Error("AnthropicDecisionEngine: no API key was provided. Pass `apiKey` or set the ANTHROPIC_API_KEY environment variable.");
     }

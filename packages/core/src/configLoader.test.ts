@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadPolicyConfig } from "./configLoader.js";
+import { loadPolicyConfig, resolveAnthropicApiKey } from "./configLoader.js";
 import { DEFAULT_POLICY } from "./policy.js";
 
 /**
@@ -88,5 +88,70 @@ describe("loadPolicyConfig", () => {
     );
 
     await expect(loadPolicyConfig({ cwd: dir })).rejects.toThrow(/passAtOrAbove is required/);
+  });
+
+  /**
+   * API-005 — nothing previously stopped a caller from mutating the loaded
+   * policy in place, silently invalidating the very thresholds
+   * `defineConfig` just validated. Covers both a top-level and a nested
+   * field, since `deepFreeze` walks the whole object graph, not just the
+   * root.
+   *
+   * Only the no-config-file path is covered here, not a real loaded
+   * `agentguard.config.ts` file: dynamic `import()` of a config file
+   * written to an OS temp dir cannot resolve the `@alexvegman/core`
+   * package specifier in this sandbox (the two pre-existing tests above,
+   * "loads a real .ts config file's overrides..." and "respects an
+   * explicit --config path...", fail here for the same reason, on `main`,
+   * unrelated to this change) — a case built on that path can never pass
+   * in this environment regardless of whether freezing works.
+   *
+   * Strict mode (this file, and vitest, run under it) makes a frozen-object
+   * write throw a TypeError; either way, the value itself must not change,
+   * which is the actual guarantee this asserts.
+   */
+  it("deep-freezes the built-in default policy so a mutation attempt does not take effect", async () => {
+    dir = mkdtempSync(path.join(tmpdir(), "agentguard-config-"));
+    const { policy } = await loadPolicyConfig({ cwd: dir });
+
+    const originalBand = [...policy.uncertaintyBand];
+    expect(() => {
+      (policy.uncertaintyBand as unknown as number[])[0] = 0.999;
+    }).toThrow(TypeError);
+    expect(policy.uncertaintyBand).toEqual(originalBand);
+
+    const originalPassAtOrAbove = policy.perAssertion.recoveredFromFailure.passAtOrAbove;
+    expect(() => {
+      (policy.perAssertion.recoveredFromFailure as { passAtOrAbove: string }).passAtOrAbove = "tampered";
+    }).toThrow(TypeError);
+    expect(policy.perAssertion.recoveredFromFailure.passAtOrAbove).toBe(originalPassAtOrAbove);
+  });
+});
+
+/**
+ * API-003 — `resolveAnthropicApiKey` is now the single documented opt-in
+ * default for `ANTHROPIC_API_KEY`; `anthropicDecision.ts`,
+ * `anthropicEscalation.ts` and `anthropicFixProposer.ts` all call this
+ * instead of reading `process.env` themselves (verified by their own
+ * construction tests). This covers the function directly.
+ */
+describe("resolveAnthropicApiKey", () => {
+  afterEach(() => {
+    delete process.env.ANTHROPIC_API_KEY;
+  });
+
+  it("returns the explicit value when one is given, ignoring the env var", () => {
+    process.env.ANTHROPIC_API_KEY = "from-env";
+    expect(resolveAnthropicApiKey("explicit")).toBe("explicit");
+  });
+
+  it("falls back to ANTHROPIC_API_KEY when no explicit value is given", () => {
+    process.env.ANTHROPIC_API_KEY = "from-env";
+    expect(resolveAnthropicApiKey(undefined)).toBe("from-env");
+  });
+
+  it("returns undefined when neither an explicit value nor the env var is present", () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    expect(resolveAnthropicApiKey(undefined)).toBeUndefined();
   });
 });
