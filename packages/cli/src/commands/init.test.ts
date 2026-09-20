@@ -36,7 +36,12 @@ describe("runInitCommand", () => {
     const configPath = path.join(cwd, "agentguard.config.ts");
     expect(existsSync(configPath)).toBe(true);
     const config = await readFile(configPath, "utf8");
-    expect(config).toContain("defineConfig");
+    expect(config).toContain("export default {");
+    // Regression: the scaffolded file must not import @alexvegman/core —
+    // a fresh `npx @alexvegman/cli init` target project has no dependency
+    // on it, only on the cli package itself. loadPolicyConfig re-applies
+    // defineConfig() internally, so a plain object default export is enough.
+    expect(config).not.toContain("@alexvegman/core");
   });
 
   it("leaves an existing agentguard.config.ts untouched rather than overwriting it", async () => {

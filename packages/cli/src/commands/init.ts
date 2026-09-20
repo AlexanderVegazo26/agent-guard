@@ -3,11 +3,17 @@ import { cp, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const DEFAULT_CONFIG = `import { defineConfig } from "@alexvegman/core";
-
-export default defineConfig({
+/**
+ * No import here on purpose: `loadPolicyConfig` (packages/core/src/configLoader.ts)
+ * re-passes this file's default export through `defineConfig()` itself, so a
+ * plain object works with zero dependencies installed in the target project —
+ * required for `npx @alexvegman/cli test` to run with nothing but the CLI
+ * package resolved. A project that *has* installed `@alexvegman/core` can
+ * still author `export default defineConfig({...})` by hand; both forms load.
+ */
+const DEFAULT_CONFIG = `export default {
   // See TRD §10.2 for every field this accepts.
-});
+};
 `;
 
 /**
