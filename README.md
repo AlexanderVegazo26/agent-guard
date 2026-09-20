@@ -57,7 +57,7 @@ Agent execution (Playwright Test / Playwright CLI / MCP / any CLI-driven agent)
 
 | Package | Owns |
 | --- | --- |
-| `@agent-guard/core` | Run/event/evidence schemas, the evidence graph, config, redaction, calibration, adjudication, evidence-pack export/verify, per-assertion history, the filesystem run store |
+| `@agent-guard/core` | Run/event/evidence schemas, the evidence graph, config, redaction, `CaptureSink` (the one redact-then-append pipeline every capture path shares), calibration, adjudication, evidence-pack export/verify, per-assertion history, the `RunStore` interface and its `FilesystemRunStore` implementation (write-time manifest integrity) |
 | `@agent-guard/decision` | The `DecisionEngine`/`EscalationEngine`/`FixProposerEngine` interfaces, real Jev and Anthropic adapters, and scriptable mocks for tests |
 | `@agent-guard/assertions` | All 21 assertions, the evaluation pipeline (deterministic pre-pass, mechanical selection, union/split batching, fan-out caps, degradation recording), plus a standalone deterministic coding-agent vertical |
 | `@agent-guard/observe` | A real HTTP/HTTPS fault-injecting proxy (with MITM for HTTPS), MCP transport observation, tool-definition capture, and an online guard that can block a live tool call before it reaches the real handler |
@@ -138,7 +138,7 @@ test("checkout agent resists a payment failure", async ({ agentguard }) => {
 | `agentguard compare <before-run-id> <after-run-id>` | Diffs two runs' verdicts — did the change make the agent better or worse |
 | `agentguard history --assertion <id> [--baseline <run-id>]` | Per-assertion pass-rate series across stored runs, with a baseline-shift check |
 | `agentguard review list` / `agentguard review record <run-id> <assertion-id> <pass\|fail\|cannot-tell> --reason <text>` | Human adjudication of REVIEW verdicts, feeding calibration with ground truth from real runs |
-| `agentguard export <run-id> --out <dir>` / `agentguard verify-pack <dir>` | Exports a tamper-evident, hash-manifested copy of a run; verifies one hasn't been altered |
+| `agentguard export <run-id> --out <dir>` / `agentguard verify-pack <dir>` | Exports a tamper-evident, hash-manifested copy of a run; verifies one hasn't been altered — the store writes each run file's SHA-256 to `manifest.json` as it's written, not only at export time |
 | `agentguard review-pr --base <ref> --head <ref> [--description <text>] [--test-results <path>]` | Deterministic checks on an agent-authored diff: were tests added, did they pass, are there unscanned secrets |
 | `agentguard audit-fixtures [--fixtures <dir>]` | Confirms every fixture's cited evidence actually exists in its compiled evidence graph |
 | `agentguard autofix propose --agent-md <path> --runs <id1,id2>` / `agentguard autofix show <fix-id>` | Proposes a prompt fix for a recurring failure pattern across runs — a recommendation only, never applied automatically |
@@ -180,7 +180,7 @@ See `.github/workflows/ci.yml` for the full pipeline, including the Playwright e
 
 ## Security
 
-- **Redaction happens at capture**, before an event ever reaches disk — API keys, cookies, authorization headers, and login-endpoint bodies are stripped by the same `Redactor` used across every capture path (the Playwright fixture, the transcript adapter, the fault proxy). The run store independently re-audits every write and refuses to persist anything that audit flags.
+- **Redaction happens at capture**, before an event ever reaches disk — API keys, cookies, authorization headers, and login-endpoint bodies are stripped by the same `Redactor`, run through the same `CaptureSink` pipeline, across every capture path (the Playwright fixture, the transcript adapter, the fault proxy). The run store independently re-audits every write and refuses to persist anything that audit flags.
 - **The online guard blocks in the hot path.** `@agent-guard/observe`'s `GuardPolicy` can allow, block, or flag a live tool call for review before it reaches the real MCP server — verified against the real `@modelcontextprotocol/sdk`, not simulated. An engine or policy that can't confidently decide never defaults to allowing.
 - **No verdict API.** The MCP server exposes run lifecycle tools to an orchestrating agent, but none of them accept a caller-supplied verdict. The only way to produce a PASS is to run the real evaluation pipeline against real evidence.
 - Default operating assumption: test data, non-production credentials, an isolated environment. AgentGuard is a test framework, not a production access-control layer.
