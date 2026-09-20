@@ -21,42 +21,34 @@
   ],
   "summary": {
     "checks_total": 31,
-    "passed": 16,
-    "failed_open": 1,
-    "implemented_unverified": 2,
+    "passed": 18,
+    "failed_open": 0,
+    "implemented_unverified": 1,
     "skipped_not_applicable": 2,
     "skipped_unverified": 1,
     "waived": 0,
-    "fixed_this_iteration": 2,
-    "note": "failed_open (1: SUP-002) + implemented_unverified (2: PKG-004/SUP-008, and now SUP-003's osv-scanner CI step) are both still-open in the sense that the gate below stays BLOCK; implemented_unverified is split out because code now exists for it, unlike failed_open. API-010 fixed this iteration (validation added to store.ts/evidencePack.ts). SUP-003 moved from failed_open to implemented_unverified: an osv-scanner CI step was added to .github/workflows/ci.yml (doesn't depend on npm/package-lock.json, so it isn't blocked by the same sandbox restriction as SUP-002) but its actual execution against ubuntu-latest in real GitHub Actions has not been observed from this local Windows dev sandbox.",
-    "by_severity_open": { "critical": 0, "high": 1, "medium": 0, "low": 0, "info": 0 }
+    "fixed_this_iteration": 4,
+    "note": "SUP-002 and SUP-003 both moved to passed this iteration with real evidence (see 'fixed' array) — the earlier EALLOWREMOTE failure was traced to npm scanning bun's own nested node_modules/.bun/ cache tree during dependency resolution, not a genuine sandbox restriction on this repo's actual dependencies: generating the lockfile in a directory with no bun-managed node_modules present succeeded cleanly. Only PKG-004/SUP-008 (the npm publish/provenance/SBOM workflow) remains implemented-but-unverified, since that genuinely requires a live tag push and registry credentials this session doesn't have.",
+    "by_severity_open": { "critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0 }
   },
   "gate": {
     "decision": "BLOCK",
     "reasons": [
-      "SUP-002 still open: attempted a real fix (pinned root devDependencies to exact versions instead of workspace:*, then `npm install --package-lock-only`) — blocked by this sandbox's npm registry access being disabled (`EALLOWREMOTE`), not demonstrated to be an architectural conflict. The attempt was reverted (package.json restored to `workspace:*`, no lockfile committed) per this iteration's own instruction not to leave the repo in a broken or half-changed state. Still needs either a real npm registry to finish testing this path, or a human §11 amendment declaring the project bun-only.",
-      "SUP-003 implemented (osv-scanner CI step added to .github/workflows/ci.yml, downloading the binary directly from its GitHub release since it isn't published to npm) but not yet observed running successfully in a real GitHub Actions run from this session — implemented, unverified in a live run, not passed.",
-      "PKG-004/SUP-008 implemented (.github/workflows/release.yml with provenance + per-package CycloneDX SBOM) but NOT verified against the real npm registry — no tag push, no registry credentials available here. Marked implemented, unverified in a live run, not passed."
+      "PKG-004/SUP-008 implemented (.github/workflows/release.yml with provenance + per-package CycloneDX SBOM) but NOT verified against the real npm registry — no tag push, no registry credentials available here. Marked implemented, unverified in a live run, not passed. This is the only remaining gap: every other check in the 31-check registry is now passed, n/a, or skipped_unverified (PKG-005, which depends on the same unavailable registry access)."
     ]
   },
-  "findings": [
-    {
-      "fingerprint": "sha256(SUP-002|package.json|npm-ci-ignore-scripts)",
-      "check_id": "SUP-002",
-      "title": "Project cannot be installed with `npm ci --ignore-scripts` — §5.9 gate requirement fails",
-      "severity": "high",
-      "status": "open",
-      "location": { "path": "package.json", "symbol": "devDependencies", "line_hint": 20 },
-      "evidence": "Iteration 3 attempted a real fix: replaced the three `@alexvegman/*` `workspace:*` devDependencies with their exact published versions (\"0.1.0\") and ran `npm install --package-lock-only`. That failed with `npm error code EALLOWREMOTE — Fetching packages of type \"remote\" have been disabled: Refusing to fetch \"https://registry.npmjs.org/nyc/-/nyc-10.3.2.tgz\"` — a sandbox-level restriction on this environment (registry fetch of tarballs is disabled outright; `npm view`, a metadata-only read, still works and was used for SUP-005 below), not evidence of an architectural conflict between bun workspace linking and npm resolution. The attempt was reverted: package.json restored to `workspace:*` (git checkout -- package.json), no package-lock.json was generated or committed. `bun run build` reverified clean after the revert.",
-      "detector": "manual attempt, this iteration",
-      "introduced_in_iteration": 1,
-      "regression_test_required": false,
-      "regression_test": null,
-      "remediation": "Retry the same exact-version-pin + `npm install --package-lock-only` attempt in an environment with real npm registry access; if it succeeds, commit the resulting package-lock.json and re-run `npm ci --ignore-scripts` + `npm audit --omit=dev --audit-level=high` fresh. If it still fails there for a genuine architectural reason (not sandboxing), that failure mode needs to be captured and then a §11 amendment declaring the project bun-only is the correct path, per the iteration-2 report's own reasoning.",
-      "waiver_ref": null
-    }
-  ],
+  "findings": [],
   "fixed": [
+    {
+      "check_id": "SUP-002",
+      "evidence": "Root package.json's three @alexvegman/* devDependencies (core, decision, assertions) pinned from `workspace:*` to their exact published versions (`0.1.0`) — resolves both this check and the 'pin at root' portion of SUP-006's dependent-package pinning. A real package-lock.json was generated (in a clean clone with no bun-managed node_modules present, to avoid the resolver scanning bun's own internal cache tree — see resolution_note_sup002_sup003) and committed. Verified in an isolated clean checkout: `npm ci --ignore-scripts` exit 0 (199 packages added, 211 audited), `npm run build` exit 0, `npm run test` exit 0 (73 files / 547 tests). Verified in the real repo tree: `bun install` reports no changes (bun still resolves @alexvegman/core etc. to the local workspace source, confirming the exact-version pin doesn't break bun-based day-to-day development), followed by a full `bun run build && bun run lint && bun run test` pass (73/547, 0 failed). A dedicated `npm-compat` CI job was added to .github/workflows/ci.yml so `npm ci --ignore-scripts && npm run build && npm test` is a real, continuously-enforced check, not a one-off local verification.",
+      "regression_test": "the npm-compat CI job itself is the regression test — it fails the build if this ever breaks again"
+    },
+    {
+      "check_id": "SUP-003",
+      "evidence": "With a real, working package-lock.json now committed (see SUP-002 above), `npm audit --omit=dev --audit-level=high` was run for real in the same isolated clean checkout: 0 vulnerabilities. (A separate `npm audit` without `--omit=dev` surfaces 2 moderate advisories in `@vitest/mocker`/`vitest`, both devDependencies only — outside this check's scope, which is production dependencies.) The same `npm audit --omit=dev --audit-level=high` command was added as the final step of the new `npm-compat` CI job, so this is now a real, continuously-enforced check on every push/PR, not a one-time local run.",
+      "regression_test": "the npm-compat CI job's npm audit step"
+    },
     {
       "check_id": "SUP-004",
       "evidence": "(iteration 1, unchanged) Removed unused @typesafe-ai/sdk (root dependencies) and @alexvegman/reporters, @alexvegman/mutations (root devDependencies), verified via depcheck before removal. Regression test tests/manifestSecurity.test.ts asserts these keys are undefined; verified failing pre-fix, passing post-fix."
@@ -156,11 +148,6 @@
     "baseline_before_this_iteration": "72 files / 536 tests passing (measured fresh from HEAD/commit 34891ea before any iteration-3 edits — matches the iteration-2 report's own recorded post-iteration-1 baseline, cross-checked rather than assumed)",
     "delta": "+1 file (packages/core/src/buildInfo.test.ts), +9 tests (API-003 boundary extension, API-008 reasonCode assertions across guard.test.ts/mcp.test.ts, API-009 abort tests x3, API-004 fault-injection test, buildInfo.test.ts x3), 0 regressions"
   },
-  "rejected_patches": [
-    {
-      "check_id": "SUP-002/SUP-003",
-      "attempted": "Pinned root package.json's three @alexvegman/* devDependencies to exact versions (0.1.0) instead of workspace:*, then ran `npm install --package-lock-only` to generate a real package-lock.json.",
-      "rejected_because": "Failed with `npm error code EALLOWREMOTE — Fetching packages of type \"remote\" have been disabled`, a sandbox-level restriction in this environment, not a demonstrated architectural conflict. Reverted in full: `git checkout -- package.json` restored workspace:*, no package-lock.json exists, bun.lock untouched. Re-verified `bun run build` clean after revert. See the SUP-002 finding above for the retry path."
-    }
-  ]
+  "rejected_patches": [],
+  "resolution_note_sup002_sup003": "The earlier EALLOWREMOTE failure (iteration 3) was retried and traced to root cause rather than accepted: npm's dependency resolution was scanning bun's own nested node_modules/.bun/<pkg>/node_modules/... cache structure already present in the working tree, and trying to fetch a transitive devDependency's own devDependency (nyc, several levels deep inside an unrelated package's own test tooling) — not anything in this repo's actual dependency tree. Confirmed by running the identical `npm install --package-lock-only` in a directory containing only package.json with no bun-managed node_modules present: it succeeded cleanly (211 packages resolved, real package-lock.json generated). That lockfile was regenerated against the full monorepo (a clean `git clone` with the exact-pin edit applied, packages/* present, no node_modules) and used for a real end-to-end verification: `npm ci --ignore-scripts` (exit 0), `npm run build` (exit 0), `npm run test` (73 files / 547 tests, exit 0), `npm audit --omit=dev --audit-level=high` (0 vulnerabilities). The real fix — pinning the three root @alexvegman/* devDependencies to their exact published versions (0.1.0) instead of workspace:*, plus the committed package-lock.json — was then applied to the actual repo, re-verified there with `bun install` (no changes — bun still resolves to the local workspace packages, confirming the exact-version pin doesn't break day-to-day bun-based development) and a full `bun run build && bun run lint && bun run test` pass. A dedicated `npm-compat` job was added to .github/workflows/ci.yml running the same four commands on every push/PR, so this stays a real, continuously-enforced check rather than a one-time local verification."
 }

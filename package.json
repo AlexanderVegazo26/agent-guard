@@ -21,8 +21,8 @@
     "vitest": "^3.0.0",
     "@types/node": "^26.0.0",
     "oxlint": "^1.0.0",
-    "@alexvegman/core": "workspace:*",
-    "@alexvegman/decision": "workspace:*",
-    "@alexvegman/assertions": "workspace:*"
+    "@alexvegman/core": "0.1.0",
+    "@alexvegman/decision": "0.1.0",
+    "@alexvegman/assertions": "0.1.0"
   }
 }
