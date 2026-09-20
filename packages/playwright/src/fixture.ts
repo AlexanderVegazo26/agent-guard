@@ -11,7 +11,7 @@ import {
   type AssertionId,
   type AssertionResult,
   type FaultSpec,
-  type FilesystemRunStore,
+  type RunStore,
   type InjectedFault,
   type PolicyConfig,
   type Redactor,
@@ -92,7 +92,7 @@ export class AgentGuardFixture {
   constructor(
     private readonly runId: string,
     private readonly engine: DecisionEngine,
-    private readonly store: FilesystemRunStore,
+    private readonly store: RunStore,
     private readonly policy: PolicyConfig,
     // PRD2 G0a: every event captured through this fixture — tool calls,
     // tool results, and the network events drained from the fault proxy —

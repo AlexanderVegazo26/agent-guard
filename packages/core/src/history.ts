@@ -1,5 +1,5 @@
 import type { AssertionStatus } from "./schema.js";
-import type { FilesystemRunStore } from "./store.js";
+import type { RunStore } from "./store.js";
 
 /**
  * PRD2 F6 — per-assertion history across stored runs. The primitive
@@ -15,7 +15,7 @@ export interface HistoryEntry {
 }
 
 export async function collectAssertionHistory(
-  store: FilesystemRunStore,
+  store: RunStore,
   assertionId: string,
 ): Promise<HistoryEntry[]> {
   const runIds = await store.listRunIds();

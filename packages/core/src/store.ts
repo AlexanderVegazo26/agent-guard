@@ -1,8 +1,13 @@
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { appendFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DefaultRedactor, type Redactor } from "./redaction.js";
 import type { Adjudication, AgentRun, AssertionResult, Evidence, EvidenceLink } from "./schema.js";
+
+function sha256(buffer: Buffer): string {
+  return createHash("sha256").update(buffer).digest("hex");
+}
 
 /**
  * §10.1 — filesystem storage. Portable, debuggable, and a native fit for CI
@@ -31,7 +36,36 @@ export interface StoredEvidence {
   links: EvidenceLink[];
 }
 
-export class FilesystemRunStore {
+/** Per-file SHA-256, written incrementally by every store write (F16) rather than computed once at export time. */
+export interface RunManifest {
+  schemaVersion: 1;
+  /** Relative path (POSIX-style, forward slashes) within the run directory → SHA-256 hex digest. */
+  files: Record<string, string>;
+}
+
+/**
+ * PRD3 F16 — the port `FilesystemRunStore` implements. `FilesystemRunStore`
+ * is the only implementation this cycle (a Postgres/object-storage backend
+ * is P2, per PRD3 §2 V8); this interface exists so the CLI, the Playwright
+ * fixture and anything else that only needs to read/write runs depends on
+ * the port, not the concrete filesystem class.
+ */
+export interface RunStore {
+  runDirectory(runId: string): Promise<string | null>;
+  appendEvent(run: Pick<AgentRun, "id" | "startedAt">, event: unknown): Promise<void>;
+  saveRun(run: AgentRun): Promise<string>;
+  saveEvidence(runId: string, evidence: StoredEvidence): Promise<void>;
+  saveDecisions(runId: string, results: Record<string, AssertionResult>): Promise<void>;
+  saveAdjudication(runId: string, adjudication: Adjudication): Promise<void>;
+  loadAdjudications(runId: string): Promise<Record<string, Adjudication> | null>;
+  loadRun(runId: string): Promise<AgentRun | null>;
+  loadEvidence(runId: string): Promise<StoredEvidence | null>;
+  loadDecisions(runId: string): Promise<Record<string, AssertionResult> | null>;
+  loadManifest(runId: string): Promise<RunManifest | null>;
+  listRunIds(): Promise<string[]>;
+}
+
+export class FilesystemRunStore implements RunStore {
   constructor(
     private readonly root: string = path.join(process.cwd(), ".agentguard"),
     private readonly redactor: Redactor = new DefaultRedactor(),
@@ -63,6 +97,36 @@ export class FilesystemRunStore {
   }
 
   /**
+   * PRD3 F16 — `manifest.json`'s per-file SHA-256, updated on every write
+   * this store makes rather than computed once at export time
+   * (`evidencePack.ts` previously did this hashing alone, at export). A
+   * tampered run file now fails `verify-pack` without ever needing an
+   * export step first.
+   *
+   * Same class of race `appendEvent` fixes for `events.jsonl` below:
+   * concurrent callers writing different files (e.g. `appendEvent` and
+   * `saveDecisions`) each do a read-modify-write of this same
+   * `manifest.json`, and an interleaving loses whichever write finishes
+   * its read first. Chaining every manifest update onto this promise
+   * serializes them without callers needing to coordinate.
+   */
+  private manifestQueue: Promise<void> = Promise.resolve();
+
+  private recordInManifest(dir: string, relativeName: string, content: string): Promise<void> {
+    const run = async (): Promise<void> => {
+      const manifestPath = path.join(dir, "manifest.json");
+      let manifest: RunManifest = { schemaVersion: 1, files: {} };
+      if (existsSync(manifestPath)) {
+        manifest = JSON.parse(await readFile(manifestPath, "utf8")) as RunManifest;
+      }
+      manifest.files[relativeName] = sha256(Buffer.from(content, "utf8"));
+      await writeFile(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+    };
+    this.manifestQueue = this.manifestQueue.then(run, run);
+    return this.manifestQueue;
+  }
+
+  /**
    * Appends one event line to `events.jsonl`, so a crashed run still yields
    * partial evidence (§10.1). PRD2 review finding: this used to read the
    * whole file and rewrite it on every call — quadratic in the number of
@@ -80,12 +144,19 @@ export class FilesystemRunStore {
     const line = `${JSON.stringify(event)}\n`;
     const filePath = path.join(dir, "events.jsonl");
     await appendFile(filePath, line, "utf8");
+    // Rehash the whole file rather than the appended line — the manifest
+    // records what's actually on disk, and appendFile's durability isn't
+    // this method's concern.
+    const wholeFile = await readFile(filePath, "utf8");
+    await this.recordInManifest(dir, "events.jsonl", wholeFile);
   }
 
   async saveRun(run: AgentRun): Promise<string> {
     const dir = path.join(this.runsRoot(), this.dateDirFor(run), run.id);
     await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, "run.json"), JSON.stringify(run, null, 2), "utf8");
+    const content = JSON.stringify(run, null, 2);
+    await writeFile(path.join(dir, "run.json"), content, "utf8");
+    await this.recordInManifest(dir, "run.json", content);
     return dir;
   }
 
@@ -101,13 +172,17 @@ export class FilesystemRunStore {
       );
     }
 
-    await writeFile(path.join(dir, "evidence.json"), JSON.stringify(evidence, null, 2), "utf8");
+    const content = JSON.stringify(evidence, null, 2);
+    await writeFile(path.join(dir, "evidence.json"), content, "utf8");
+    await this.recordInManifest(dir, "evidence.json", content);
   }
 
   async saveDecisions(runId: string, results: Record<string, AssertionResult>): Promise<void> {
     const dir = await this.runDirFor(runId);
     if (!dir) throw new Error(`FilesystemRunStore: no run directory found for "${runId}" — call saveRun() first`);
-    await writeFile(path.join(dir, "decisions.json"), JSON.stringify(results, null, 2), "utf8");
+    const content = JSON.stringify(results, null, 2);
+    await writeFile(path.join(dir, "decisions.json"), content, "utf8");
+    await this.recordInManifest(dir, "decisions.json", content);
   }
 
   /**
@@ -122,7 +197,9 @@ export class FilesystemRunStore {
     if (!dir) throw new Error(`FilesystemRunStore: no run directory found for "${runId}" — call saveRun() first`);
     const existing = (await this.loadAdjudications(runId)) ?? {};
     const updated = { ...existing, [adjudication.assertionId]: adjudication };
-    await writeFile(path.join(dir, "adjudications.json"), JSON.stringify(updated, null, 2), "utf8");
+    const content = JSON.stringify(updated, null, 2);
+    await writeFile(path.join(dir, "adjudications.json"), content, "utf8");
+    await this.recordInManifest(dir, "adjudications.json", content);
   }
 
   async loadAdjudications(runId: string): Promise<Record<string, Adjudication> | null> {
@@ -154,6 +231,14 @@ export class FilesystemRunStore {
     const filePath = path.join(dir, "decisions.json");
     if (!existsSync(filePath)) return null;
     return JSON.parse(await readFile(filePath, "utf8")) as Record<string, AssertionResult>;
+  }
+
+  async loadManifest(runId: string): Promise<RunManifest | null> {
+    const dir = await this.runDirFor(runId);
+    if (!dir) return null;
+    const filePath = path.join(dir, "manifest.json");
+    if (!existsSync(filePath)) return null;
+    return JSON.parse(await readFile(filePath, "utf8")) as RunManifest;
   }
 
   async listRunIds(): Promise<string[]> {

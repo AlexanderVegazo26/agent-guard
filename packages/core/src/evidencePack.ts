@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { cp, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DefaultRedactor, type Redactor } from "./redaction.js";
 
@@ -86,6 +86,13 @@ export async function buildEvidencePack(
 
   await mkdir(outDir, { recursive: true });
   await cp(runDir, outDir, { recursive: true });
+  // PRD3 F16 — `runDir` may already carry a `manifest.json` the store wrote
+  // at write time. This function computes and writes its own (a superset:
+  // it also carries `runId`/`agentguardVersion`/`redactionAudit`), so the
+  // copied one is removed first rather than left to be hashed and then
+  // immediately invalidated by the overwrite below.
+  const copiedManifestPath = path.join(outDir, "manifest.json");
+  if (existsSync(copiedManifestPath)) await rm(copiedManifestPath);
 
   const redactor = options.redactor ?? new DefaultRedactor();
   const evidencePath = path.join(outDir, "evidence.json");
