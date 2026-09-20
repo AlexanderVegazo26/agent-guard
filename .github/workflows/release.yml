@@ -31,18 +31,21 @@ jobs:
           node-version-file: .nvmrc
           registry-url: "https://registry.npmjs.org"
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
+      # Installed via npm, not bun, deliberately: `npm sbom` below needs an
+      # npm-managed node_modules tree to walk consistently — a bun-installed
+      # tree makes it choke on unrelated transitive packages' own dev-only
+      # peer requirements (the same class of noise SUP-002 hit with `npm
+      # ci` before package-lock.json existed). Since npm ci already works
+      # cleanly on this repo (verified in security-review-report.json),
+      # there's no reason to install twice with two different tools here.
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: npm ci --ignore-scripts
 
       - name: Build
-        run: bun run build
+        run: npm run build
 
       - name: Test
-        run: bun run test
+        run: npm run test
 
       # Every package under packages/* whose own package.json declares
       # `"private": false` — determined at run time from the checked-out
