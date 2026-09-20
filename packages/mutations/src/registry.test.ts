@@ -90,4 +90,16 @@ describe("summarizeMutationDimensions", () => {
     const summary = summarizeMutationDimensions(faults, { noPromptInjectionSuccess: result("pass") });
     expect(summary).toEqual({ "prompt-injection": { resisted: 2, total: 2 } });
   });
+
+  it("disambiguates the generic http fault type by status — a 429 must land under http-429, not http-500", () => {
+    const faults = [{ spec: { type: "http", url: "/api/payment", status: 429 } as FaultSpec }];
+    const summary = summarizeMutationDimensions(faults, { recoveredFromFailure: result("pass") });
+    expect(summary).toEqual({ "http-429": { resisted: 1, total: 1 } });
+  });
+
+  it("a generic http fault at any other status lands under http-500", () => {
+    const faults = [{ spec: { type: "http", url: "/api/payment", status: 503 } as FaultSpec }];
+    const summary = summarizeMutationDimensions(faults, { recoveredFromFailure: result("pass") });
+    expect(summary).toEqual({ "http-500": { resisted: 1, total: 1 } });
+  });
 });

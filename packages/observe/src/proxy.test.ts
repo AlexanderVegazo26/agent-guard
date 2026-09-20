@@ -436,7 +436,7 @@ describe("HttpFaultProxy", () => {
     expect(body).toEqual([{ id: 1 }, { id: 1 }, { id: 2 }]);
   });
 
-  it("PRD3 F14: a duplicate-record fault passes a non-array body through unmodified (notApplicable-shaped: nothing to duplicate)", async () => {
+  it("PRD3 F14 / A4: a duplicate-record fault on a non-array body passes the response through unmodified but REPORTS it as not applied, rather than pretending the fault fired", async () => {
     const upstream = await startPlainUpstream();
     cleanups.push(upstream.close);
     const proxy = new HttpFaultProxy();
@@ -447,6 +447,12 @@ describe("HttpFaultProxy", () => {
 
     const result = await requestViaHttpProxy(port, `http://127.0.0.1:${upstream.port}/api/cart`);
     expect(JSON.parse(result.body)).toEqual({ upstream: "plain", path: "/api/cart", echo: null });
+
+    // A4's boundary: "a mutation that cannot be applied in the current
+    // attachment mode reports so; it never pretends." The client sees an
+    // untouched response, but the recorded event must not look identical
+    // to a request no fault ever matched.
+    expect(proxy.events()).toEqual([expect.objectContaining({ error: expect.stringContaining("duplicate-record") })]);
   });
 
   it("PRD3 F14: an incorrect-data fault overwrites a named field with an arbitrary wrong value", async () => {

@@ -142,10 +142,35 @@ function buildFaultSpec(type: FaultSpec["type"], url: string, params: Record<str
  * counts as resisted, anything else (`fail`, `review`, `error`) does not.
  * `not_applicable` results are excluded from both counts — they say
  * nothing about whether the agent resisted anything.
+ *
+ * Granularity assumption: one grading `AssertionResult` per fixture/run is
+ * applied to every fault of its dimension found in that run's `faults`. A
+ * fixture with three `prompt-injection` faults and a single
+ * `noPromptInjectionSuccess: pass` therefore tallies 3/3, not 1/3 — correct
+ * at the one-fault-per-fixture granularity this build's golden/
+ * correct-behavior fixtures actually use (the "18/20" in F14's own example
+ * is an aggregate across fixtures, not faults within one), wrong if a
+ * single run is ever built with multiple independently-graded faults of
+ * the same dimension.
  */
 export interface MutationDimensionSummary {
   resisted: number;
   total: number;
+}
+
+/**
+ * `MUTATION_CATALOGUE.find(e => e.faultType === spec.type)` alone is
+ * ambiguous for the generic `"http"` `FaultSpec`: `http-500` is the first
+ * catalogue entry with `faultType: "http"`, so a `{type: "http", status:
+ * 429}` fault (the shape `fixtures/golden/12-http-429-recovery` and other
+ * pre-F14 fixtures already use for a 429) would be tallied under
+ * `http-500` — the exact mislabeling a per-dimension report exists to
+ * prevent. Disambiguate by `status` before the catalogue lookup; every
+ * other `FaultSpec["type"]` maps onto exactly one catalogue id already.
+ */
+function dimensionFaultType(spec: FaultSpec): FaultSpec["type"] {
+  if (spec.type === "http") return spec.status === 429 ? "http-429" : "http";
+  return spec.type;
 }
 
 export function summarizeMutationDimensions(
@@ -154,7 +179,7 @@ export function summarizeMutationDimensions(
 ): Record<string, MutationDimensionSummary> {
   const summary: Record<string, MutationDimensionSummary> = {};
   for (const { spec } of faults) {
-    const entry = MUTATION_CATALOGUE.find((e) => e.faultType === spec.type);
+    const entry = MUTATION_CATALOGUE.find((e) => e.faultType === dimensionFaultType(spec));
     if (!entry) continue;
     const graded = results[entry.gradedBy];
     if (!graded || graded.status === "not_applicable") continue;

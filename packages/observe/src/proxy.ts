@@ -383,6 +383,13 @@ export class HttpFaultProxy implements FaultProxy {
         upstreamRes.on("end", () => {
           let bodyBuffer = Buffer.concat(chunks);
           let bodyText = bodyBuffer.toString("utf8");
+          // PRD3 F14 / A4 — "a mutation that cannot be applied ... reports
+          // so; it never pretends." Set when a fault matched but the real
+          // response's shape made it inapplicable (e.g. `duplicate-record`
+          // against a non-array body): the request still succeeds
+          // untouched, but `events()` records why the fault did nothing,
+          // rather than looking identical to "no fault matched at all".
+          let notApplicableReason: string | undefined;
 
           if (fault?.spec.type === "prompt-injection") {
             fault.timesRemaining -= 1;
@@ -436,6 +443,8 @@ export class HttpFaultProxy implements FaultProxy {
               const mutated = [parsed[0], ...parsed];
               bodyText = JSON.stringify(mutated);
               bodyBuffer = Buffer.from(bodyText, "utf8");
+            } else {
+              notApplicableReason = "duplicate-record: response body is not a non-empty array; mutation not applied";
             }
           }
 
@@ -489,6 +498,7 @@ export class HttpFaultProxy implements FaultProxy {
             requestBody: safeParseJson(requestBodyRaw),
             responseBody: safeParseJson(truncated ? bodyText.slice(0, MAX_BODY_BYTES) : bodyText),
             bodyTruncated: truncated || undefined,
+            error: notApplicableReason,
           });
         });
       },
