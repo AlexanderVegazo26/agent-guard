@@ -256,8 +256,9 @@ async function main(): Promise<void> {
  * swallowed the *next flag* as if it were one. Also gains `--flag=value`
  * support, which nothing here previously recognized at all.
  *
- * Exported (this file has no other tests) so `flagValue.test.ts` can
- * cover it directly without spawning the CLI binary.
+ * Exported so `index.test.ts` can cover it directly without spawning the
+ * CLI binary (PRD3 D8: this comment used to name a `flagValue.test.ts`
+ * that was never actually created — the coverage lives in `index.test.ts`).
  */
 export function flagValue(args: string[], flag: string): string | undefined {
   const i = args.indexOf(flag);

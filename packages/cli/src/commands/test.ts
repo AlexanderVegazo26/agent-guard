@@ -3,6 +3,7 @@ import {
   DefaultEvidenceCompiler,
   FilesystemRunStore,
   appendCalibrationRecords,
+  applyReviewAsFailurePolicy,
   computeExitCode,
   formatConsole,
   languageAdvisory,
@@ -88,5 +89,5 @@ export async function runTestCommand(options: TestCommandOptions): Promise<numbe
     }
   }
 
-  return computeExitCode(allResults);
+  return applyReviewAsFailurePolicy(computeExitCode(allResults), policy);
 }

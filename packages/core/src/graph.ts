@@ -4,8 +4,15 @@ import type { AgentEvent, AgentRun, Evidence, EvidenceLink, EvidenceRelation, Ev
  * §5 Evidence compiler and §5.2 query interface.
  *
  * Pipeline: Events → Normalize → Extract → Link → EvidenceGraph.
- * The "Verify-redaction" stage (TRD §5.1) is intentionally not implemented —
- * redaction-at-capture (§8) is out of scope for this build (see repo notes).
+ *
+ * PRD3 D2: this comment used to say the "Verify-redaction" stage (TRD §5.1)
+ * was intentionally not implemented. It was, before PRD2 G0a wired
+ * redaction into every capture path: `FilesystemRunStore.saveEvidence`
+ * (`store.ts`) now runs `Redactor.verify()` as a defence-in-depth audit and
+ * refuses to write on a finding. Redaction itself happens earlier, at
+ * capture (`redaction.ts`, called from `TranscriptAdapter`, the Playwright
+ * fixture and `HttpFaultProxy`) — this compiler receives already-redacted
+ * events and does no redaction work of its own.
  */
 
 export interface EvidenceGraph {

@@ -1,4 +1,4 @@
-import type { AssertionId, AssertionResult, AssertionStatus, Evidence, EvidenceGraph, PolicyConfig } from "@agent-guard/core";
+import type { AssertionId, AssertionResult, AssertionStatus, DegradationRecord, Evidence, EvidenceGraph, PolicyConfig } from "@agent-guard/core";
 import {
   estimateQuestionsTokens,
   estimateStateTokens,
@@ -139,8 +139,21 @@ export async function evaluate(
   // own minimal state; a fan-out assertion whose OWN payload still
   // overflows applies its cap (with priority ordering) before asking, and
   // if that still doesn't fit, abstains at capacity rather than guessing.
+  //
+  // PRD3 A3/D6-D7: `DegradationRecord` was declared on `AssertionResult`
+  // (`schema.ts`) and never populated by any code path — a report could
+  // show a REVIEW's `reviewVia` but never say *why* a PASS/FAIL took the
+  // split-batch or fan-out-cap route to get there. Every assertion
+  // evaluated below the union-batch fast path now records which of the two
+  // implemented rungs it took. `tighten-selection` and `chunk-aggregate`
+  // (TRD §6.7's remaining rungs) are still not implemented — see this
+  // function's own header — so no result is ever tagged with either.
   for (const id of pending) {
     const plan = plans[id];
+    let degradation: DegradationRecord = {
+      strategy: "split-batch",
+      reason: "the union of all pending assertions' evidence exceeded the engine's token budget; this assertion was evaluated in its own call",
+    };
 
     let own = buildBatch(graph, [id], plans, policy, false);
     let ownStateTokens = estimateStateTokens(own.state);
@@ -154,6 +167,10 @@ export async function evaluate(
       own = buildBatch(graph, [id], plans, policy, true);
       ownStateTokens = estimateStateTokens(own.state);
       ownQuestionTokens = estimateQuestionsTokens(own.questions);
+      degradation = {
+        strategy: "fanout-cap",
+        reason: `dropped ${plan.dropped.length} of ${ordered.length} item(s) by priority order to fit this assertion's own call within the engine's budget`,
+      };
     } else if (plan) {
       plan.included = plan.toAsk;
     }
@@ -166,6 +183,7 @@ export async function evaluate(
         reviewVia: "capacity",
         evidence: [],
         explanation: "evidence exceeds engine capacity",
+        degradation: { strategy: "review", reason: "evidence still exceeds the engine's per-call budget after the fan-out cap; abstaining rather than guessing" },
         durationMs: 0,
       };
       continue;
@@ -174,7 +192,7 @@ export async function evaluate(
     const startedAt = Date.now();
     const decision = await engine.decide(own.state, own.questions);
     const durationMs = Date.now() - startedAt;
-    Object.assign(results, interpretAll([id], graph, plans, decision.answers, policy, durationMs));
+    Object.assign(results, interpretAll([id], graph, plans, decision.answers, policy, durationMs, degradation));
   }
 
   return results;
@@ -248,6 +266,7 @@ function interpretAll(
   answers: Record<string, DecisionAnswer>,
   policy: PolicyConfig,
   durationMs: number,
+  degradation?: DegradationRecord,
 ): Record<string, AssertionResult> {
   const out: Record<string, AssertionResult> = {};
 
@@ -256,7 +275,7 @@ function interpretAll(
 
     if (def.kind === "single") {
       const evidenceIds = selectEvidenceForAssertion(graph, id, def.selectorTypes).map((e) => e.id);
-      out[id] = interpretSingle(id, def.primitive, def.polarity, answers[id], evidenceIds, policy, durationMs);
+      out[id] = interpretSingle(id, def.primitive, def.polarity, answers[id], evidenceIds, policy, durationMs, degradation);
       continue;
     }
 
@@ -271,6 +290,7 @@ function interpretAll(
       policy,
       durationMs,
       "jev",
+      degradation,
     );
   }
 
@@ -307,6 +327,7 @@ function interpretSingle(
   evidenceIds: string[],
   policy: PolicyConfig,
   durationMs: number,
+  degradation?: DegradationRecord,
 ): AssertionResult {
   if (!answer) throw new Error(`evaluate: no answer received for assertion "${id}"`);
 
@@ -324,6 +345,7 @@ function interpretSingle(
         // numbers and why calibration needs the latter.
         confidence: noulConfidence(answer.noul),
         evidence: evidenceIds,
+        degradation,
         durationMs,
       },
       status,
@@ -342,6 +364,7 @@ function interpretSingle(
         confidence: answer.confidence,
         probabilities: answer.probabilities,
         evidence: evidenceIds,
+        degradation,
         durationMs,
       },
       status,
@@ -378,6 +401,7 @@ function aggregateFanOut(
   policy: PolicyConfig,
   durationMs: number,
   basis: "deterministic" | "jev",
+  degradation?: DegradationRecord,
 ): AssertionResult {
   const cited = new Set<string>();
   const notes: string[] = [];
@@ -473,6 +497,7 @@ function aggregateFanOut(
     coverageGaps,
     explanation: notes.length > 0 ? notes.join("; ") : `${cited.size} item(s) checked`,
     reviewVia: status === "review" ? (coverageGaps ? "capacity" : "uncertainty-band") : undefined,
+    degradation,
     durationMs,
   };
 }

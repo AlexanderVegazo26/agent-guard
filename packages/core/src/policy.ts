@@ -1,8 +1,12 @@
 /**
- * Configuration — TRD §10.2. Only the fields the built spine actually reads
- * are implemented (uncertainty bands, the Score/Choice cut points, and the
- * fan-out caps). Proxy, redaction and reporter config are declared for shape
- * compatibility but not consumed by anything in this build.
+ * Configuration — TRD §10.2. `PolicyConfig` below is the complete, current
+ * shape: uncertainty bands, the Score/Choice cut points, the fan-out caps,
+ * and `ci.reviewAsFailure` (applied via `applyReviewAsFailurePolicy` in
+ * `exitCode.ts`). There is no `proxy`/`redaction`/`reporters` field here —
+ * an earlier draft of this file declared those for shape compatibility with
+ * the TRD's config example; they were removed rather than left inert, since
+ * an accepted-but-ignored config field is a worse failure mode than a
+ * missing one (PRD3 D11).
  */
 
 export interface ScorePolicy {

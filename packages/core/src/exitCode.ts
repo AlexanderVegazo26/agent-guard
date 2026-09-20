@@ -1,3 +1,4 @@
+import type { PolicyConfig } from "./policy.js";
 import type { AssertionResult } from "./schema.js";
 
 /**
@@ -25,4 +26,19 @@ export function computeExitCode(results: Record<string, AssertionResult>): 0 | 1
   if (statuses.some((s) => s === "fail")) return 1;
   if (statuses.some((s) => s === "review")) return 2;
   return 0;
+}
+
+/**
+ * PRD3 — the CLI (`test`, `replay`, `watch`) used to call `computeExitCode`
+ * directly and never consult `policy.ci.reviewAsFailure`, while the
+ * Playwright fixture separately upgraded a `2` to a thrown error under the
+ * same flag (`fixture.ts`). Same config, two call sites, two behaviors.
+ * This is the one place both now go through: `computeExitCode` still never
+ * sees the policy (its CI-routing contract is unchanged, see its own doc
+ * comment), and this wrapper applies the *documented* meaning of the flag —
+ * "a REVIEW-dominant run should fail CI" — by upgrading a `2` to a `1`.
+ */
+export function applyReviewAsFailurePolicy(exitCode: 0 | 1 | 2 | 3, policy: Pick<PolicyConfig, "ci">): 0 | 1 | 2 | 3 {
+  if (exitCode === 2 && policy.ci.reviewAsFailure) return 1;
+  return exitCode;
 }

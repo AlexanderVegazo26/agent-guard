@@ -11,6 +11,9 @@ export function formatConsole(label: string, results: Record<string, AssertionRe
     if (r.coverageGaps && r.coverageGaps.length > 0) {
       lines.push(`      unexamined (fan-out cap): ${r.coverageGaps.length} item(s)`);
     }
+    if (r.degradation) {
+      lines.push(`      degraded (${r.degradation.strategy}): ${r.degradation.reason}`);
+    }
   }
 
   lines.push("", `  ${overallLabel(results)}`, "");

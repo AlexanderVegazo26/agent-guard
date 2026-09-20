@@ -14,10 +14,16 @@ import { DefaultRedactor, type FaultSpec, type Redactor } from "@agent-guard/cor
  * provisionally selects; Playwright route interception is the documented
  * fallback if Phase 0 question 8 resolves against it (not built here).
  *
- * What this file does NOT attempt: fidelity parity-testing against an
- * unproxied baseline (TRD §12, "proxy fidelity" — an open risk), and it has
- * not been wired to a real MCP-owned browser's launch options — see the
- * project's top-level notes on what's built vs. declared.
+ * PRD3 D3: this comment used to say fidelity parity-testing against an
+ * unproxied baseline "is not attempted" (TRD §12). It now is —
+ * `proxy-fidelity.test.ts` runs GET, JSON POST and HTTPS-MITM requests both
+ * with and without the proxy and asserts byte-identical bodies; see that
+ * file's own header for what it deliberately does not cover (HTTP/2,
+ * connection reuse, timing overhead). Still not attempted: this proxy has
+ * not been wired to a real MCP-owned browser's launch options — a caller
+ * (e.g. the Playwright fixture) is responsible for pointing a browser's
+ * proxy/CA-trust settings at `proxyInfo()`'s output once a fault is
+ * injected; nothing here does that automatically.
  */
 
 export interface RecordedNetworkEvent {

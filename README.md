@@ -71,8 +71,8 @@ of question that goes to the engine.
 | --- | --- |
 | `@agent-guard/core` | Run/event/evidence schemas, the evidence graph, config, calibration, the filesystem run store |
 | `@agent-guard/decision` | The `DecisionEngine`/`EscalationEngine`/`FixProposerEngine` interfaces, real Jev/Anthropic adapters, and scriptable mocks for tests |
-| `@agent-guard/assertions` | All 21 assertions, the evaluation pipeline, the degradation ladder |
-| `@agent-guard/observe` | A real HTTP/HTTPS fault-injecting proxy (with MITM for HTTPS), redaction, MCP transport observation |
+| `@agent-guard/assertions` | All 21 assertions, the evaluation pipeline (incl. the degradation ladder — partial, see `docs/PRD3.md` §3), plus the standalone coding-agent vertical (`codingVertical.ts`, not one of the 21, not wired into the evidence-graph pipeline) |
+| `@agent-guard/observe` | A real HTTP/HTTPS fault-injecting proxy (with MITM for HTTPS), MCP transport observation and the online guard. Redaction itself lives in `@agent-guard/core`; this package re-exports it for compatibility |
 | `@agent-guard/playwright` | A Playwright Test fixture (`observe`/`inject`/`verify`) and a Playwright CLI transcript adapter |
 | `@agent-guard/mcp` | An MCP server exposing the run/evidence/assertion/mutation lifecycle to an orchestrating agent — a real `agentguard-mcp` stdio launcher, deferred engine construction so it starts without an API key |
 | `@agent-guard/cli` | `agentguard` — `watch`, `test`, `replay`, `calibrate`, `doctor`, `report`, `compare`, `init`, `review`, `export`/`verify-pack`, `history`, `review-pr`, `audit-fixtures`, `autofix` |
