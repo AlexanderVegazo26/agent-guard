@@ -75,4 +75,43 @@ describe("agentguard history", () => {
     const exitCode = await runHistoryCommand({ assertionId: "goalCompleted", baselineRunId: "does-not-exist", storeRoot: root });
     expect(exitCode).toBe(3);
   });
+
+  it("prints the two-proportion z-test result alongside the heuristic regression line (PRD3 F21)", async () => {
+    await seedRun("run-1", "2026-09-20T00:00:00.000Z", PASS);
+    await seedRun("run-2", "2026-09-20T01:00:00.000Z", PASS); // baseline
+    await seedRun("run-3", "2026-09-20T02:00:00.000Z", FAIL);
+    await seedRun("run-4", "2026-09-20T03:00:00.000Z", FAIL);
+
+    const exitCode = await runHistoryCommand({ assertionId: "goalCompleted", baselineRunId: "run-2", storeRoot: root });
+    expect(exitCode).toBe(1);
+    const output = logSpy.mock.calls.flat().join("\n");
+    expect(output).toMatch(/two-proportion z-test/);
+    expect(output).toMatch(/significant change/);
+  });
+
+  async function seedRunWithAgent(id: string, startedAt: string, agentName: string, result: AssertionResult): Promise<void> {
+    const run = AgentRun.parse({
+      id,
+      task: "x",
+      agent: { name: agentName },
+      faults: [],
+      startedAt,
+      endedAt: startedAt,
+      schemaVersion: 1,
+      events: [],
+    });
+    await store.saveRun(run);
+    await store.saveDecisions(id, { goalCompleted: result });
+  }
+
+  it("--agent restricts the printed series to that agent's runs (PRD3 F21)", async () => {
+    await seedRunWithAgent("run-a1", "2026-09-20T00:00:00.000Z", "agent-a", PASS);
+    await seedRunWithAgent("run-b1", "2026-09-20T01:00:00.000Z", "agent-b", FAIL);
+
+    const exitCode = await runHistoryCommand({ assertionId: "goalCompleted", agentName: "agent-a", storeRoot: root });
+    expect(exitCode).toBe(0);
+    const output = logSpy.mock.calls.flat().join("\n");
+    expect(output).toContain("run-a1");
+    expect(output).not.toContain("run-b1");
+  });
 });

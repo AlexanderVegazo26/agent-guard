@@ -1,10 +1,12 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { FilesystemRunStore } from "@agent-guard/core";
-import { buildReportV1FromRun, formatHtml, formatJson, formatJunit, type ReportV1 } from "@agent-guard/reporters";
+import { buildReportV1FromRun, formatHtml, formatJson, formatJunit, formatSite, type ReportV1 } from "@agent-guard/reporters";
 
 export interface ReportCommandOptions {
   storeRoot?: string;
+  /** PRD3 F21 — also write `reports/site.html`, the fleet-level dashboard (run list, evidence graph, assertion history, mutation dimensions, adjudication queue). */
+  site?: boolean;
 }
 
 /**
@@ -53,6 +55,12 @@ export async function runReportCommand(options: ReportCommandOptions): Promise<n
   const htmlPath = path.join(reportsDir, "report.html");
   await writeFile(htmlPath, formatHtml(reports), "utf8");
   console.log(`  wrote ${htmlPath}`);
+
+  if (options.site) {
+    const sitePath = path.join(reportsDir, "site.html");
+    await writeFile(sitePath, formatSite(reports), "utf8");
+    console.log(`  wrote ${sitePath}`);
+  }
 
   return 0;
 }

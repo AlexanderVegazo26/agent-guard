@@ -77,4 +77,40 @@ describe("runReportCommand", () => {
     expect(html).toContain("run-report-test");
     expect(html).toContain("goalCompleted");
   });
+
+  it("writes reports/site.html only when --site is requested (PRD3 F21)", async () => {
+    const run = AgentRun.parse({
+      id: "run-site-test",
+      task: "Do the thing.",
+      agent: { name: "test-agent" },
+      faults: [],
+      startedAt: "2026-09-20T00:00:00.000Z",
+      endedAt: "2026-09-20T00:00:01.000Z",
+      schemaVersion: 1,
+      events: [],
+    });
+    await store.saveRun(run);
+    await store.saveEvidence(run.id, { task: run.task, items: [], links: [] });
+    await store.saveDecisions(run.id, {
+      goalCompleted: {
+        id: "goalCompleted",
+        status: "pass",
+        basis: "jev",
+        signal: "noul-probability",
+        confidence: 0.9,
+        evidence: ["e-task"],
+        durationMs: 10,
+      },
+    });
+
+    const withoutSite = await runReportCommand({ storeRoot: root });
+    expect(withoutSite).toBe(0);
+    await expect(readFile(path.join(root, "reports", "site.html"), "utf8")).rejects.toThrow();
+
+    const withSite = await runReportCommand({ storeRoot: root, site: true });
+    expect(withSite).toBe(0);
+    const site = await readFile(path.join(root, "reports", "site.html"), "utf8");
+    expect(site).toContain("run-site-test");
+    expect(site).toContain("AgentGuard fleet");
+  });
 });

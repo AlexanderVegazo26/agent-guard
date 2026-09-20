@@ -4,18 +4,22 @@ import { collectAssertionHistory, compareToBaseline } from "@agent-guard/reporte
 export interface HistoryCommandOptions {
   assertionId: AssertionId;
   baselineRunId?: string;
+  agentName?: string;
   storeRoot?: string;
 }
 
 /**
- * PRD2 F6 — `agentguard history --assertion <id> [--baseline <run-id>]`.
+ * PRD2 F6 / PRD3 F21 — `agentguard history --assertion <id> [--baseline <run-id>] [--agent <name>]`.
  * The primitive an AI engineer needs to answer "is today's agent worse
  * than last week's, in this specific dimension" — per-assertion, never a
  * single rolled-up score (PRD v0.6 §6's non-goal applies here too).
+ * `--agent` restricts the series to one agent's runs before any baseline
+ * comparison runs, so a fleet with several agents doesn't have one
+ * agent's regression averaged away by another's improvement.
  */
 export async function runHistoryCommand(options: HistoryCommandOptions): Promise<number> {
   const store = new FilesystemRunStore(options.storeRoot);
-  const history = await collectAssertionHistory(store, options.assertionId);
+  const history = await collectAssertionHistory(store, options.assertionId, { agentName: options.agentName });
 
   if (history.length === 0) {
     console.log(`agentguard history: no stored run has evaluated "${options.assertionId}" yet.`);
@@ -48,10 +52,18 @@ export async function runHistoryCommand(options: HistoryCommandOptions): Promise
     return 0;
   }
 
+  if (comparison.significant !== null) {
+    console.log(
+      comparison.significant
+        ? `two-proportion z-test: significant change (z=${comparison.zScore!.toFixed(2)}, p=${comparison.pValue!.toFixed(4)} < 0.05).`
+        : `two-proportion z-test: not significant (z=${comparison.zScore!.toFixed(2)}, p=${comparison.pValue!.toFixed(4)}).`,
+    );
+  }
+
   if (comparison.regressed) {
     console.log(
       `⚠ possible regression: pass rate dropped by ${Math.abs(comparison.delta! * 100).toFixed(0)} points since the baseline ` +
-        "(a stated threshold, not a statistical significance test — PRD2 F6).",
+        "(a stated threshold, not the significance test above — PRD2 F6's original heuristic, kept for compatibility).",
     );
     return 1;
   }

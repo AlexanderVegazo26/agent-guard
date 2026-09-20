@@ -82,7 +82,7 @@ async function main(): Promise<void> {
   }
 
   if (command === "report") {
-    process.exitCode = await runReportCommand({ storeRoot: flagValue(rest, "--store") });
+    process.exitCode = await runReportCommand({ storeRoot: flagValue(rest, "--store"), site: rest.includes("--site") });
     return;
   }
 
@@ -226,6 +226,7 @@ async function main(): Promise<void> {
     process.exitCode = await runHistoryCommand({
       assertionId: assertionId as AssertionId,
       baselineRunId: flagValue(rest, "--baseline"),
+      agentName: flagValue(rest, "--agent"),
       storeRoot: flagValue(rest, "--store"),
     });
     return;
@@ -319,13 +320,13 @@ function printHelp(): void {
       "  replay <run-id> [--live] [--escalate] [--assertions a,b] [--store <dir>] [--config <path>]   Re-evaluate a stored run",
       "  calibrate [--store <dir>]                     Report the §6.9 calibration curve",
       "  doctor [--live]                               Verify the environment (Node/.nvmrc, API key, engine capabilities)",
-      "  report [--store <dir>]                        Write json/junit/html reports from every stored run's decisions",
+      "  report [--store <dir>] [--site]                Write json/junit/html reports, plus reports/site.html (fleet dashboard) with --site, from every stored run's decisions",
       "  compare <before-run-id> <after-run-id> [--store <dir>]  Diff two stored runs' verdicts (exit 1 on any regression)",
       "  review list [--store <dir>]                   List open REVIEW verdicts across the store with no adjudication yet",
       "  review record <run-id> <assertion-id> <pass|fail|cannot-tell> --reason <text> [--by <name>] [--store <dir>]   Record a human verdict",
       "  export <run-id> --out <dir> [--store <dir>]   Export a tamper-evident copy of a run (SHA-256 manifest)",
       "  verify-pack <pack-dir>                         Recompute and check an exported pack's manifest",
-      "  history --assertion <id> [--baseline <run-id>] [--store <dir>]   Per-assertion verdict series across stored runs",
+      "  history --assertion <id> [--baseline <run-id>] [--agent <name>] [--store <dir>]   Per-assertion verdict series across stored runs",
       "  tokens [<run-id>] [--store <dir>]              Real input/output token usage per run, from the decision engine's own usage — no more black box",
       "  validate-live --fixtures <dir> --repeat <n> --budget <usd> [--store <dir>] [--config <path>]   Repeat fixtures against real Jev, record usage/spread, refuses with no budget",
       "  review-pr --base <ref> --head <ref> [--repo <dir>] [--description <text>] [--test-results <path>]   Deterministic coding-agent checks against a real git diff",
