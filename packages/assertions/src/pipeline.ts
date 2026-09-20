@@ -1,4 +1,4 @@
-import type { AssertionId, AssertionResult, AssertionStatus, DegradationRecord, Evidence, EvidenceGraph, PolicyConfig } from "@agent-guard/core";
+import { recordEngineSpan, type AssertionId, type AssertionResult, type AssertionStatus, type DegradationRecord, type Evidence, type EvidenceGraph, type PolicyConfig } from "@agent-guard/core";
 import {
   estimateQuestionsTokens,
   estimateStateTokens,
@@ -132,6 +132,15 @@ export async function evaluate(
     const startedAt = Date.now();
     const decision = await engine.decide(trial.state, trial.questions);
     const durationMs = Date.now() - startedAt;
+    recordEngineSpan({
+      name: "engine.decide",
+      durationMs,
+      tokenEstimate: trialStateTokens + trialQuestionTokens,
+      actualInputTokens: decision.usage.inputTokens,
+      actualOutputTokens: decision.usage.outputTokens,
+      estimateAccuracyRatio: estimateAccuracyRatio(trialStateTokens + trialQuestionTokens, decision.usage.inputTokens),
+      assertionIds: pending,
+    });
     const batchResults = interpretAll(pending, graph, plans, decision.answers, policy, durationMs);
     return { ...results, ...withUsage(batchResults, decision.usage) };
   }
@@ -193,6 +202,16 @@ export async function evaluate(
     const startedAt = Date.now();
     const decision = await engine.decide(own.state, own.questions);
     const durationMs = Date.now() - startedAt;
+    recordEngineSpan({
+      name: "engine.decide",
+      durationMs,
+      tokenEstimate: ownStateTokens + ownQuestionTokens,
+      actualInputTokens: decision.usage.inputTokens,
+      actualOutputTokens: decision.usage.outputTokens,
+      estimateAccuracyRatio: estimateAccuracyRatio(ownStateTokens + ownQuestionTokens, decision.usage.inputTokens),
+      degradationStrategy: degradation.strategy,
+      assertionIds: [id],
+    });
     const callResults = interpretAll([id], graph, plans, decision.answers, policy, durationMs, degradation);
     Object.assign(results, withUsage(callResults, decision.usage));
   }
@@ -297,6 +316,10 @@ function interpretAll(
   }
 
   return out;
+}
+
+function estimateAccuracyRatio(estimate: number, actual: number): number | null {
+  return estimate > 0 ? actual / estimate : null;
 }
 
 /**

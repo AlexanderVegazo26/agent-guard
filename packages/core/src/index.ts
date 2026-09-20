@@ -16,3 +16,4 @@ export * from "./consoleReporter.js";
 export * from "./compare.js";
 export * from "./transcriptAdapter.js";
 export * from "./captureSink.js";
+export * from "./observability.js";
