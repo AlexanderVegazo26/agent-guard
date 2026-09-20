@@ -1,11 +1,8 @@
 {
-  "name": "@agent-guard/cli",
+  "name": "@agent-guard/reporters",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": {
-    "agentguard": "./dist/index.js"
-  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -13,8 +10,6 @@
   },
   "dependencies": {
     "@agent-guard/core": "workspace:*",
-    "@agent-guard/decision": "workspace:*",
-    "@agent-guard/assertions": "workspace:*",
-    "@agent-guard/reporters": "workspace:*"
+    "zod": "^3.24.0"
   }
 }

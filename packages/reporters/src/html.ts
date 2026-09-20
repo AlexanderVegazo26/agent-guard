@@ -1,21 +1,22 @@
 import type { AssertionResult, AssertionStatus } from "@agent-guard/core";
+import type { ReportV1 } from "./schema.js";
 
 /**
- * FR-015 — a single self-contained HTML file (no external assets, so it
- * survives being uploaded as a CI artifact and opened offline). One row per
- * run, one row per assertion within it, using the same three-way status
- * split as `junit.ts` (`fail`/`error` vs. `review`/`not_applicable` vs.
- * `pass`) so the two reporters never disagree about what counts as a
- * problem worth a human's attention.
+ * FR-015 / PRD3 F17 — a single self-contained HTML file (no external
+ * assets, so it survives being uploaded as a CI artifact and opened
+ * offline), rendered from `ReportV1[]`. One row per run, one row per
+ * assertion within it, using the same three-way status split as
+ * `junit.ts` (`fail`/`error` vs. `review`/`not_applicable` vs. `pass`) so
+ * the two reporters never disagree about what counts as a problem worth a
+ * human's attention.
  */
-export function formatHtml(runs: Record<string, Record<string, AssertionResult>>): string {
-  const runNames = Object.keys(runs).sort();
+export function formatHtml(reports: ReportV1[]): string {
+  const sorted = [...reports].sort((a, b) => a.runId.localeCompare(b.runId));
   const totals = { pass: 0, fail: 0, review: 0, error: 0 };
 
-  const sections = runNames.map((runName) => {
-    const results = Object.values(runs[runName]!);
-    for (const r of results) tally(totals, r.status);
-    return formatRunSection(runName, runs[runName]!);
+  const sections = sorted.map((report) => {
+    for (const r of Object.values(report.decisions)) tally(totals, r.status);
+    return formatRunSection(report);
   });
 
   const summary = `${totals.pass} pass, ${totals.fail} fail, ${totals.review} review, ${totals.error} error`;
@@ -45,7 +46,7 @@ export function formatHtml(runs: Record<string, Record<string, AssertionResult>>
 </head>
 <body>
 <h1>AgentGuard report</h1>
-<p class="summary">${runNames.length} run(s) &mdash; ${escapeHtml(summary)}</p>
+<p class="summary">${sorted.length} run(s) &mdash; ${escapeHtml(summary)}</p>
 ${sections.join("\n")}
 </body>
 </html>
@@ -59,12 +60,12 @@ function tally(totals: { pass: number; fail: number; review: number; error: numb
   else totals.review += 1; // review + not_applicable, same grouping as junit.ts's "skipped"
 }
 
-function formatRunSection(runName: string, results: Record<string, AssertionResult>): string {
-  const rows = Object.values(results)
+function formatRunSection(report: ReportV1): string {
+  const rows = Object.values(report.decisions)
     .map((r) => formatRow(r))
     .join("\n");
 
-  return `<h2 class="run-heading">${escapeHtml(runName)}</h2>
+  return `<h2 class="run-heading">${escapeHtml(report.runId)}</h2>
 <table>
   <thead><tr><th>Assertion</th><th>Status</th><th>Basis</th><th>Evidence</th><th>Explanation</th><th>Degradation</th></tr></thead>
   <tbody>
@@ -76,10 +77,6 @@ ${rows}
 function formatRow(result: AssertionResult): string {
   const statusLabel = result.status === "not_applicable" ? "n/a" : result.status;
   const evidenceCell = result.evidence.length > 0 ? escapeHtml(result.evidence.join(", ")) : "&mdash;";
-  // PRD3 A3 — surfaces `AssertionResult.degradation`, which the pipeline now
-  // populates on every result reached via the split-batch or fan-out-cap
-  // rungs of the §6.7 ladder (`pipeline.ts`); previously declared in the
-  // schema and never rendered anywhere.
   const degradationCell = result.degradation ? escapeHtml(`${result.degradation.strategy}: ${result.degradation.reason}`) : "&mdash;";
   return `    <tr>
       <td>${escapeHtml(result.id)}</td>

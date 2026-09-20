@@ -13,6 +13,7 @@
     "@agent-guard/decision": "workspace:*",
     "@agent-guard/assertions": "workspace:*",
     "@agent-guard/observe": "workspace:*",
+    "@agent-guard/reporters": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@playwright/test": "1.63.0"
   }

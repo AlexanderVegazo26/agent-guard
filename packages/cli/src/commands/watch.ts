@@ -7,7 +7,6 @@ import {
   TranscriptAdapter,
   applyReviewAsFailurePolicy,
   computeExitCode,
-  formatConsole,
   languageAdvisory,
   loadPolicyConfig,
   runSourceAdvisory,
@@ -15,7 +14,7 @@ import {
 } from "@agent-guard/core";
 import { evaluate } from "@agent-guard/assertions";
 import type { DecisionAnswer, DecisionEngine, DecisionResult, DecisionState, EngineCapabilities, QuestionSet } from "@agent-guard/decision";
-import { formatHtml } from "../reporters/html.js";
+import { buildReportV1FromRun, formatConsole, formatHtml } from "@agent-guard/reporters";
 
 export interface WatchCommandOptions {
   task: string;
@@ -83,7 +82,8 @@ export async function runWatchCommand(options: WatchCommandOptions): Promise<num
   const assertions = options.assertions ?? DEFAULT_WATCH_ASSERTIONS;
   const results = await evaluate(graph, assertions, new NoLiveEngine(), policy);
 
-  console.log(formatConsole(run.id, results));
+  const report = buildReportV1FromRun(run, results);
+  console.log(formatConsole(report));
   const advisory = languageAdvisory(graph);
   if (advisory) console.log(`\n  ${advisory}`);
   const sourceAdvisory = runSourceAdvisory(run);
@@ -100,7 +100,7 @@ export async function runWatchCommand(options: WatchCommandOptions): Promise<num
   const reportsDir = path.join(options.storeRoot ?? path.join(process.cwd(), ".agentguard"), "reports");
   await mkdir(reportsDir, { recursive: true });
   const htmlPath = path.join(reportsDir, `watch-${run.id}.html`);
-  await writeFile(htmlPath, formatHtml({ [run.id]: results }), "utf8");
+  await writeFile(htmlPath, formatHtml([report]), "utf8");
   console.log(`  wrote ${htmlPath}`);
 
   return applyReviewAsFailurePolicy(computeExitCode(results), policy);

@@ -15,6 +15,7 @@
     "@agent-guard/core": "workspace:*",
     "@agent-guard/decision": "workspace:*",
     "@agent-guard/assertions": "workspace:*",
+    "@agent-guard/reporters": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^3.24.0"
   }

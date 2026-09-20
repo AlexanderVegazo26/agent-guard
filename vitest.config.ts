@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@agent-guard/core": path.resolve(__dirname, "packages/core/src/index.ts"),
+      "@agent-guard/reporters": path.resolve(__dirname, "packages/reporters/src/index.ts"),
       "@agent-guard/decision": path.resolve(__dirname, "packages/decision/src/index.ts"),
       "@agent-guard/assertions": path.resolve(__dirname, "packages/assertions/src/index.ts"),
       "@agent-guard/observe": path.resolve(__dirname, "packages/observe/src/index.ts"),

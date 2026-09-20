@@ -5,12 +5,12 @@ import {
   appendCalibrationRecords,
   applyReviewAsFailurePolicy,
   computeExitCode,
-  formatConsole,
   languageAdvisory,
   loadPolicyConfig,
   toCalibrationRecord,
   type AssertionResult,
 } from "@agent-guard/core";
+import { buildReportV1, formatConsole } from "@agent-guard/reporters";
 import { AnthropicDecisionEngine, AnthropicEscalationEngine, MockDecisionEngine, JevDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
 import { escalateReviews } from "@agent-guard/assertions";
 import { loadFixtureSuite } from "../fixtures.js";
@@ -92,7 +92,7 @@ export async function runTestCommand(options: TestCommandOptions): Promise<numbe
       results = await escalateReviews(graph, results, escalationEngine);
     }
 
-    console.log(formatConsole(fixture.name, results));
+    console.log(formatConsole(buildReportV1({ runId: fixture.name, decisions: results })));
     const advisory = languageAdvisory(graph);
     if (advisory) console.log(`\n  ${advisory}`);
 

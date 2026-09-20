@@ -11,6 +11,7 @@
         "@agent-guard/assertions": "workspace:*",
         "@agent-guard/core": "workspace:*",
         "@agent-guard/decision": "workspace:*",
+        "@agent-guard/reporters": "workspace:*",
         "@types/node": "^26.0.0",
         "oxlint": "^1.0.0",
         "typescript": "^7.0.2",
@@ -35,6 +36,7 @@
         "@agent-guard/assertions": "workspace:*",
         "@agent-guard/core": "workspace:*",
         "@agent-guard/decision": "workspace:*",
+        "@agent-guard/reporters": "workspace:*",
       },
     },
     "packages/core": {
@@ -55,10 +57,14 @@
     "packages/mcp": {
       "name": "@agent-guard/mcp",
       "version": "0.1.0",
+      "bin": {
+        "agentguard-mcp": "./dist/bin.js",
+      },
       "dependencies": {
         "@agent-guard/assertions": "workspace:*",
         "@agent-guard/core": "workspace:*",
         "@agent-guard/decision": "workspace:*",
+        "@agent-guard/reporters": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.30.0",
         "zod": "^3.24.0",
       },
@@ -80,8 +86,17 @@
         "@agent-guard/core": "workspace:*",
         "@agent-guard/decision": "workspace:*",
         "@agent-guard/observe": "workspace:*",
+        "@agent-guard/reporters": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.30.0",
         "@playwright/test": "1.63.0",
+      },
+    },
+    "packages/reporters": {
+      "name": "@agent-guard/reporters",
+      "version": "0.1.0",
+      "dependencies": {
+        "@agent-guard/core": "workspace:*",
+        "zod": "^3.24.0",
       },
     },
   },
@@ -99,6 +114,8 @@
     "@agent-guard/observe": ["@agent-guard/observe@workspace:packages/observe"],
 
     "@agent-guard/playwright": ["@agent-guard/playwright@workspace:packages/playwright"],
+
+    "@agent-guard/reporters": ["@agent-guard/reporters@workspace:packages/reporters"],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.28.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ=="],
 

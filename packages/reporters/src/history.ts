@@ -1,11 +1,15 @@
-import type { AssertionStatus } from "./schema.js";
-import type { RunStore } from "./store.js";
+import type { AssertionStatus, RunStore } from "@agent-guard/core";
+import { buildReportV1FromRun } from "./schema.js";
 
 /**
  * PRD2 F6 — per-assertion history across stored runs. The primitive
  * `agentguard history` and, later, a dashboard's history view are built
  * on: "was this assertion evaluated in this run, and if so, what did it
  * say" for every stored run, in chronological order.
+ *
+ * PRD3 F17 A7: builds a `ReportV1` per run (via `buildReportV1FromRun`)
+ * and reads the assertion off it, rather than indexing `decisions.json`
+ * directly — the same contract `compare` and the dashboard consume.
  */
 export interface HistoryEntry {
   runId: string;
@@ -25,9 +29,10 @@ export async function collectAssertionHistory(
     const run = await store.loadRun(runId);
     const decisions = await store.loadDecisions(runId);
     if (!run || !decisions) continue;
-    const result = decisions[assertionId];
+    const report = buildReportV1FromRun(run, decisions);
+    const result = report.decisions[assertionId];
     if (!result) continue;
-    entries.push({ runId, startedAt: run.startedAt, status: result.status, confidence: result.confidence });
+    entries.push({ runId: report.runId, startedAt: report.startedAt ?? run.startedAt, status: result.status, confidence: result.confidence });
   }
 
   entries.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
@@ -57,7 +62,7 @@ export interface BaselineComparison {
  * Deliberately not a real two-sample statistical test (a proportion
  * z-test, say) — PRD2 F6 asks for one, but a threshold on the raw pass-
  * rate delta is what this ships with; a real test needs a sample-size-
- * aware confidence calculation this pass doesn't build. `REGRESSION_THRESHOLD`
+ * aware confidence calculation this pass doesn't build [PRD3:F21]. `REGRESSION_THRESHOLD`
  * is a stated, crude cutoff, not a statistically justified one.
  */
 export const REGRESSION_THRESHOLD = 0.3;

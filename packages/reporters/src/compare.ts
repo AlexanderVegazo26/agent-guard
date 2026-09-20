@@ -1,11 +1,12 @@
-import type { AssertionResult, AssertionStatus } from "./schema.js";
+import type { AssertionResult, AssertionStatus } from "@agent-guard/core";
+import type { ReportV1 } from "./schema.js";
 
 /**
  * `agentguard compare <runA> <runB>` — the missing mechanism for "did
  * agent.md v2 beat v1 on the same fixtures." Every other CLI command
- * answers "is this run good"; nothing before this answered "did this run
- * get better." Two stored runs' `decisions.json` in, one verdict-per-
- * assertion diff out.
+ * answers "is this run good," this one answers "did this run get better."
+ * Two `ReportV1`s in (PRD3 F17 A7: `compare` consumes `ReportV1` rather
+ * than raw `decisions.json`), one verdict-per-assertion diff out.
  *
  * `pass`/`review`/`fail` sit on an explicit, ordered scale — `not_applicable`
  * and `error` do not (an assertion that stopped applying isn't "worse" than
@@ -41,25 +42,20 @@ const RANK: Record<AssertionStatus, number | null> = {
   error: null,
 };
 
-export function compareRuns(
-  beforeId: string,
-  afterId: string,
-  before: Record<string, AssertionResult>,
-  after: Record<string, AssertionResult>,
-): RunComparison {
-  const ids = new Set([...Object.keys(before), ...Object.keys(after)]);
+export function compareRuns(before: ReportV1, after: ReportV1): RunComparison {
+  const ids = new Set([...Object.keys(before.decisions), ...Object.keys(after.decisions)]);
   const assertions: AssertionComparison[] = [];
   const counts: Record<ComparisonVerdict, number> = { improved: 0, regressed: 0, unchanged: 0, changed: 0, added: 0, removed: 0 };
 
   for (const id of [...ids].sort()) {
-    const b = before[id] ?? null;
-    const a = after[id] ?? null;
+    const b = before.decisions[id] ?? null;
+    const a = after.decisions[id] ?? null;
     const verdict = classify(b, a);
     counts[verdict] += 1;
     assertions.push({ id, before: b, after: a, verdict });
   }
 
-  return { beforeId, afterId, assertions, counts };
+  return { beforeId: before.runId, afterId: after.runId, assertions, counts };
 }
 
 function classify(before: AssertionResult | null, after: AssertionResult | null): ComparisonVerdict {

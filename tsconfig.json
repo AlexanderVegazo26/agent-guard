@@ -19,6 +19,7 @@
   "files": [],
   "references": [
     { "path": "packages/core" },
+    { "path": "packages/reporters" },
     { "path": "packages/decision" },
     { "path": "packages/assertions" },
     { "path": "packages/observe" },

@@ -3,12 +3,12 @@ import {
   FilesystemRunStore,
   applyReviewAsFailurePolicy,
   computeExitCode,
-  formatConsole,
   languageAdvisory,
   loadPolicyConfig,
   runSourceAdvisory,
   type AssertionId,
 } from "@agent-guard/core";
+import { buildReportV1FromRun, formatConsole } from "@agent-guard/reporters";
 import { escalateReviews, evaluate } from "@agent-guard/assertions";
 import { AnthropicEscalationEngine, JevDecisionEngine, MockDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
 
@@ -66,7 +66,7 @@ export async function runReplayCommand(options: ReplayCommandOptions): Promise<n
     }
   }
 
-  console.log(formatConsole(options.runId, results));
+  console.log(formatConsole(buildReportV1FromRun(run, results)));
   const advisory = languageAdvisory(graph);
   if (advisory) console.log(`\n  ${advisory}`);
   const sourceAdvisory = runSourceAdvisory(run);

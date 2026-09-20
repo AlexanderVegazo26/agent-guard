@@ -66,8 +66,9 @@ describe("runReportCommand", () => {
     const exitCode = await runReportCommand({ storeRoot: root });
 
     expect(exitCode).toBe(0);
-    const jsonReport = JSON.parse(await readFile(path.join(root, "reports", "report.json"), "utf8"));
-    expect(jsonReport.runs["run-report-test"].decisions.goalCompleted.status).toBe("pass");
+    const jsonReport = JSON.parse(await readFile(path.join(root, "reports", "report.json"), "utf8")) as { reports: { runId: string; decisions: Record<string, { status: string }> }[] };
+    const runReport = jsonReport.reports.find((r) => r.runId === "run-report-test");
+    expect(runReport?.decisions.goalCompleted?.status).toBe("pass");
 
     const junit = await readFile(path.join(root, "reports", "junit.xml"), "utf8");
     expect(junit).toContain("goalCompleted");

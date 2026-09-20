@@ -14,6 +14,7 @@ import {
 } from "@agent-guard/core";
 import { evaluate } from "@agent-guard/assertions";
 import type { DecisionEngine } from "@agent-guard/decision";
+import { buildReportV1FromRun } from "@agent-guard/reporters";
 
 /**
  * PRD §32 — the AgentGuard MCP server. Exposes exactly the seven tools the
@@ -207,9 +208,13 @@ export class AgentGuardMcpServer {
 
     this.server.tool(
       "agentguard_get_report",
-      "Fetch the most recent assertion results recorded for a run (from the last agentguard_assert call), or null if none has run yet.",
+      "Fetch the ReportV1 (PRD3 F17) built from the most recent assertion results recorded for a run (from the last agentguard_assert call), or null if none has run yet.",
       { runId: z.string() },
-      async ({ runId }) => jsonResult(this.requireRun(runId).lastDecisions ?? null),
+      async ({ runId }) => {
+        const state = this.requireRun(runId);
+        if (!state.lastDecisions) return jsonResult(null);
+        return jsonResult(buildReportV1FromRun(this.toAgentRun(state), state.lastDecisions));
+      },
     );
 
     this.server.tool(

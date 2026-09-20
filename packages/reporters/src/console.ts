@@ -1,10 +1,11 @@
-import type { AssertionResult } from "./schema.js";
+import type { AssertionResult } from "@agent-guard/core";
+import type { ReportV1 } from "./schema.js";
 
-/** PRD §9.1 — console reporter. Each assertion renders in the terms of its own primitive. */
-export function formatConsole(label: string, results: Record<string, AssertionResult>): string {
-  const lines: string[] = ["AgentGuard", "", `  ${label}`, ""];
+/** PRD §9.1 / PRD3 F17 — the console reporter, rendering from a `ReportV1` rather than a raw decisions map. */
+export function formatConsole(report: ReportV1): string {
+  const lines: string[] = ["AgentGuard", "", `  ${report.runId}`, ""];
 
-  for (const [id, r] of Object.entries(results)) {
+  for (const [id, r] of Object.entries(report.decisions)) {
     lines.push(`  ${icon(r.status)} ${id.padEnd(28)} ${detail(r)}`);
     if (r.explanation) lines.push(`      ${r.explanation}`);
     if (r.missing && r.missing.length > 0) lines.push(`      missing: ${r.missing.join(", ")}`);
@@ -16,7 +17,7 @@ export function formatConsole(label: string, results: Record<string, AssertionRe
     }
   }
 
-  lines.push("", `  ${overallLabel(results)}`, "");
+  lines.push("", `  ${overallLabel(report.decisions)}`, "");
   lines.push("  Confidence values are advisory — calibration is not yet validated (PRD §10.3) [PRD3:F19].");
   return lines.join("\n");
 }

@@ -1,4 +1,5 @@
-import { FilesystemRunStore, collectAssertionHistory, compareToBaseline, type AssertionId } from "@agent-guard/core";
+import { FilesystemRunStore, type AssertionId } from "@agent-guard/core";
+import { collectAssertionHistory, compareToBaseline } from "@agent-guard/reporters";
 
 export interface HistoryCommandOptions {
   assertionId: AssertionId;

@@ -26,6 +26,7 @@
     "oxlint": "^1.0.0",
     "@agent-guard/core": "workspace:*",
     "@agent-guard/decision": "workspace:*",
-    "@agent-guard/assertions": "workspace:*"
+    "@agent-guard/assertions": "workspace:*",
+    "@agent-guard/reporters": "workspace:*"
   }
 }

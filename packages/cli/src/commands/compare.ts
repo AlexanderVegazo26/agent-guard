@@ -1,4 +1,5 @@
-import { FilesystemRunStore, compareRuns, formatComparison } from "@agent-guard/core";
+import { FilesystemRunStore } from "@agent-guard/core";
+import { buildReportV1, compareRuns, formatComparison } from "@agent-guard/reporters";
 
 export interface CompareCommandOptions {
   beforeId: string;
@@ -10,8 +11,9 @@ export interface CompareCommandOptions {
  * `agentguard compare <before-run-id> <after-run-id>` — the lab mechanism:
  * every other command answers "is this run good," this one answers "did
  * this run get better." Reads both runs' persisted `decisions.json`
- * (`agentguard test`/`replay` already write these); does not re-evaluate
- * anything itself.
+ * (`agentguard test`/`replay` already write these), wraps each into a
+ * `ReportV1` (PRD3 F17 A7), and diffs those. Does not re-evaluate anything
+ * itself.
  *
  * Exit code mirrors `computeExitCode`'s CI-routing role: `1` if anything
  * regressed (so a CI gate can block a change that made agent.md worse),
@@ -34,7 +36,9 @@ export async function runCompareCommand(options: CompareCommandOptions): Promise
     return 3;
   }
 
-  const comparison = compareRuns(options.beforeId, options.afterId, before, after);
+  const beforeReport = buildReportV1({ runId: options.beforeId, decisions: before });
+  const afterReport = buildReportV1({ runId: options.afterId, decisions: after });
+  const comparison = compareRuns(beforeReport, afterReport);
   console.log(formatComparison(comparison));
 
   return comparison.counts.regressed > 0 ? 1 : 0;

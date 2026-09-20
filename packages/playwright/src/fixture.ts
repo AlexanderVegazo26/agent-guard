@@ -4,7 +4,6 @@ import {
   DefaultEvidenceCompiler,
   DefaultRedactor,
   computeExitCode,
-  formatConsole,
   languageAdvisory,
   type AgentEvent,
   type AgentRun,
@@ -18,6 +17,7 @@ import {
 } from "@agent-guard/core";
 import { evaluate } from "@agent-guard/assertions";
 import type { DecisionEngine } from "@agent-guard/decision";
+import { buildReportV1FromRun, formatConsole } from "@agent-guard/reporters";
 import { HttpFaultProxy, ObservingTransport, type CapturedEvent, type FaultProxy, type GuardPolicy } from "@agent-guard/observe";
 import type { ObservableAgent, ObservableAgentFactory } from "./agent.js";
 
@@ -159,7 +159,7 @@ export class AgentGuardFixture {
 
     const graph = await new DefaultEvidenceCompiler().compile(run);
     const results = await evaluate(graph, options.assertions, this.engine, this.policy);
-    console.log(formatConsole(this.runId, results));
+    console.log(formatConsole(buildReportV1FromRun(run, results)));
     const advisory = languageAdvisory(graph);
     if (advisory) console.log(`\n  ${advisory}`);
 

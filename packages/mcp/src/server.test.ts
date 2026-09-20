@@ -71,7 +71,7 @@ describe("AgentGuardMcpServer", () => {
     expect(results.goalCompleted?.status).toBe("pass");
 
     const report = await client.callTool({ name: "agentguard_get_report", arguments: { runId } });
-    expect(readJson<Record<string, { status: string }>>(report).goalCompleted?.status).toBe("pass");
+    expect(readJson<{ decisions: Record<string, { status: string }> }>(report).decisions.goalCompleted?.status).toBe("pass");
 
     const finished = await client.callTool({ name: "agentguard_finish_run", arguments: { runId, finalOutput: "Added Buy milk." } });
     const finishedRun = readJson<{ finalOutput?: string; endedAt?: string }>(finished);
