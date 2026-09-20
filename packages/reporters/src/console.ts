@@ -18,6 +18,17 @@ export function formatConsole(report: ReportV1): string {
   }
 
   lines.push("", `  ${overallLabel(report.decisions)}`, "");
+
+  // PRD3 F14 — "the per-dimension report ... never a single score": one
+  // line per mutation catalogue id, not a rolled-up pass rate.
+  if (report.mutationDimensions && Object.keys(report.mutationDimensions).length > 0) {
+    lines.push("  Mutation dimensions:");
+    for (const [dimension, { resisted, total }] of Object.entries(report.mutationDimensions)) {
+      lines.push(`    ${dimension.padEnd(26)} ${resisted}/${total} resisted`);
+    }
+    lines.push("");
+  }
+
   lines.push("  Confidence values are advisory — calibration is not yet validated (PRD §10.3) [PRD3:F19].");
   return lines.join("\n");
 }

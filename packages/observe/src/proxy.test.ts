@@ -335,4 +335,152 @@ describe("HttpFaultProxy", () => {
     expect(JSON.parse(first.body).title).toBe("malicious");
     expect(JSON.parse(second.body).title).toBeUndefined();
   });
+
+  it("PRD3 F14: an http-429 fault returns a well-formed 429 with an optional Retry-After header", async () => {
+    const upstream = await startPlainUpstream();
+    cleanups.push(upstream.close);
+    const proxy = new HttpFaultProxy();
+    const { port } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    proxy.inject({ type: "http-429", url: "/api/payment", retryAfterMs: 2000 });
+
+    const result = await requestViaHttpProxy(port, `http://127.0.0.1:${upstream.port}/api/payment`);
+
+    expect(result.status).toBe(429);
+    expect(JSON.parse(result.body)).toEqual({ error: "Too Many Requests" });
+  });
+
+  it("PRD3 F14: an empty-response fault returns a 200 with a zero-length body, distinct from malformed-response", async () => {
+    const upstream = await startPlainUpstream();
+    cleanups.push(upstream.close);
+    const proxy = new HttpFaultProxy();
+    const { port } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    proxy.inject({ type: "empty-response", url: "/api/inventory" });
+
+    const result = await requestViaHttpProxy(port, `http://127.0.0.1:${upstream.port}/api/inventory`);
+
+    expect(result.status).toBe(200);
+    expect(result.body).toBe("");
+  });
+
+  it("PRD3 F14: a permission-denied fault returns a 403", async () => {
+    const upstream = await startPlainUpstream();
+    cleanups.push(upstream.close);
+    const proxy = new HttpFaultProxy();
+    const { port } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    proxy.inject({ type: "permission-denied", url: "/api/admin/refund" });
+
+    const result = await requestViaHttpProxy(port, `http://127.0.0.1:${upstream.port}/api/admin/refund`);
+
+    expect(result.status).toBe(403);
+    expect(JSON.parse(result.body)).toEqual({ error: "Permission denied" });
+  });
+
+  it("PRD3 F14: a stale-data fault overwrites a named field of the REAL upstream response, leaving the rest intact", async () => {
+    const upstream = await startPlainUpstream();
+    cleanups.push(upstream.close);
+    const proxy = new HttpFaultProxy();
+    const { port } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    proxy.inject({ type: "stale-data", url: "/api/cart", field: "path", staleValue: "/stale" });
+
+    const result = await requestViaHttpProxy(port, `http://127.0.0.1:${upstream.port}/api/cart`);
+    const body = JSON.parse(result.body);
+
+    expect(result.status).toBe(200);
+    expect(body.path).toBe("/stale");
+    expect(body.upstream).toBe("plain"); // the rest of the real response survives
+  });
+
+  it("PRD3 F14: a missing-field fault deletes a named field the real upstream sent", async () => {
+    const upstream = await startPlainUpstream();
+    cleanups.push(upstream.close);
+    const proxy = new HttpFaultProxy();
+    const { port } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    proxy.inject({ type: "missing-field", url: "/api/cart", field: "upstream" });
+
+    const result = await requestViaHttpProxy(port, `http://127.0.0.1:${upstream.port}/api/cart`);
+    const body = JSON.parse(result.body);
+
+    expect(result.status).toBe(200);
+    expect("upstream" in body).toBe(false);
+    expect(body.path).toBe("/api/cart"); // the rest of the real response survives
+  });
+
+  it("PRD3 F14: a duplicate-record fault duplicates the first element of an array response", async () => {
+    const arrayUpstream = http.createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify([{ id: 1 }, { id: 2 }]));
+    });
+    await new Promise<void>((resolve) => arrayUpstream.listen(0, "127.0.0.1", resolve));
+    const upstreamPort = (arrayUpstream.address() as net.AddressInfo).port;
+    cleanups.push(() => new Promise((resolve) => arrayUpstream.close(() => resolve())));
+
+    const proxy = new HttpFaultProxy();
+    const { port } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    proxy.inject({ type: "duplicate-record", url: "/api/orders" });
+
+    const result = await requestViaHttpProxy(port, `http://127.0.0.1:${upstreamPort}/api/orders`);
+    const body = JSON.parse(result.body);
+
+    expect(body).toEqual([{ id: 1 }, { id: 1 }, { id: 2 }]);
+  });
+
+  it("PRD3 F14: a duplicate-record fault passes a non-array body through unmodified (notApplicable-shaped: nothing to duplicate)", async () => {
+    const upstream = await startPlainUpstream();
+    cleanups.push(upstream.close);
+    const proxy = new HttpFaultProxy();
+    const { port } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    proxy.inject({ type: "duplicate-record", url: "/api/cart" });
+
+    const result = await requestViaHttpProxy(port, `http://127.0.0.1:${upstream.port}/api/cart`);
+    expect(JSON.parse(result.body)).toEqual({ upstream: "plain", path: "/api/cart", echo: null });
+  });
+
+  it("PRD3 F14: an incorrect-data fault overwrites a named field with an arbitrary wrong value", async () => {
+    const upstream = await startPlainUpstream();
+    cleanups.push(upstream.close);
+    const proxy = new HttpFaultProxy();
+    const { port } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    proxy.inject({ type: "incorrect-data", url: "/api/pricing", field: "path", incorrectValue: "/wrong" });
+
+    const result = await requestViaHttpProxy(port, `http://127.0.0.1:${upstream.port}/api/pricing`);
+    expect(JSON.parse(result.body).path).toBe("/wrong");
+  });
+
+  it("PRD3 F14: a contradictory-response fault sets two fields of the real response to conflicting values", async () => {
+    const upstream = await startPlainUpstream();
+    cleanups.push(upstream.close);
+    const proxy = new HttpFaultProxy();
+    const { port } = await proxy.start();
+    cleanups.push(() => proxy.stop());
+
+    proxy.inject({
+      type: "contradictory-response",
+      url: "/api/shipment",
+      field: "path",
+      value: "/delivered",
+      conflictField: "upstream",
+      conflictValue: "not-delivered",
+    });
+
+    const result = await requestViaHttpProxy(port, `http://127.0.0.1:${upstream.port}/api/shipment`);
+    const body = JSON.parse(result.body);
+    expect(body.path).toBe("/delivered");
+    expect(body.upstream).toBe("not-delivered");
+  });
 });

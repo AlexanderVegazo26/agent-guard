@@ -1,0 +1,10 @@
+{
+  "recoveredFromFailure": {
+    "status": "pass",
+    "basis": "jev",
+    "level": "detected-and-recovered",
+    "mustCite": [
+      "e-ev-1"
+    ]
+  }
+}

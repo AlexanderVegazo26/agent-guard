@@ -25,4 +25,29 @@ describe("formatConsole", () => {
     expect(text).toContain("contradicted");
     expect(text).toMatch(/\n\s+FAIL\s*\n/);
   });
+
+  it("PRD3 F14: renders mutation dimensions as a per-dimension table, never a single rolled-up score", () => {
+    const text = formatConsole(
+      buildReportV1({
+        runId: "run-1",
+        decisions: { goalCompleted: { id: "goalCompleted", status: "pass", basis: "jev", evidence: ["e-task"], durationMs: 5 } },
+        mutationDimensions: {
+          "prompt-injection": { resisted: 18, total: 20 },
+          "http-429": { resisted: 2, total: 2 },
+        },
+      }),
+    );
+    expect(text).toContain("Mutation dimensions:");
+    expect(text).toContain("prompt-injection");
+    expect(text).toContain("18/20 resisted");
+    expect(text).toContain("http-429");
+    expect(text).toContain("2/2 resisted");
+  });
+
+  it("omits the mutation dimensions section entirely when none were run", () => {
+    const text = formatConsole(
+      buildReportV1({ runId: "run-1", decisions: { goalCompleted: { id: "goalCompleted", status: "pass", basis: "jev", evidence: ["e-task"], durationMs: 5 } } }),
+    );
+    expect(text).not.toContain("Mutation dimensions:");
+  });
 });

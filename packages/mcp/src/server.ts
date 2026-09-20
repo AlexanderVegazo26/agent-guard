@@ -16,6 +16,7 @@ import {
 import { evaluate } from "@agent-guard/assertions";
 import type { DecisionEngine } from "@agent-guard/decision";
 import { buildReportV1FromRun } from "@agent-guard/reporters";
+import { HttpFaultProxy, type FaultProxy } from "@agent-guard/observe";
 
 /**
  * PRD §32 — the AgentGuard MCP server. Exposes exactly the seven tools the
@@ -59,6 +60,9 @@ interface RunState {
   endedAt?: string;
   finalOutput?: string;
   lastDecisions?: Record<string, AssertionResult>;
+  /** PRD3 F14 acceptance: "agentguard_mutate followed by a real request through the proxy returns the fault" — one real `HttpFaultProxy` per run, started lazily on first mutate. */
+  proxy?: FaultProxy;
+  proxyInfo?: { port: number; caCert?: Buffer };
 }
 
 let runCounter = 0;
@@ -191,7 +195,7 @@ export class AgentGuardMcpServer {
 
     this.server.tool(
       "agentguard_mutate",
-      "Inject an adversarial fault (HTTP fault or prompt injection) into a run's record, for adversarial/mutation testing (PRD §13).",
+      "Inject an adversarial fault from the PRD3 F14 catalogue into a run's record AND into a real HTTP fault proxy the caller can route traffic through, so the next matching request actually returns the fault rather than only being recorded as injected (PRD §13).",
       { runId: z.string(), fault: FaultSpec },
       async ({ runId, fault }) => {
         const state = this.requireRun(runId);
@@ -208,7 +212,21 @@ export class AgentGuardMcpServer {
           // of the agent, and not something the agent reported either.
           provenance: "harness",
         });
-        return jsonResult({ faultId });
+
+        // PRD3 F14 acceptance: start a real proxy on first mutation for
+        // this run, and actually inject into it — not just record the
+        // intent. A caller (e.g. an orchestrating agent's own browser or
+        // HTTP client) is responsible for routing through `proxyInfo`,
+        // same division of labor as `HttpFaultProxy`'s own doc comment.
+        let proxyInfo = state.proxyInfo;
+        if (!state.proxy) {
+          state.proxy = new HttpFaultProxy();
+          proxyInfo = await state.proxy.start();
+          state.proxyInfo = proxyInfo;
+        }
+        state.proxy.inject(fault);
+
+        return jsonResult({ faultId, proxy: { port: proxyInfo!.port, caCert: proxyInfo!.caCert?.toString("base64") } });
       },
     );
 
@@ -231,6 +249,9 @@ export class AgentGuardMcpServer {
         const state = this.requireRun(runId);
         state.finalOutput = finalOutput;
         state.endedAt = new Date().toISOString();
+        if (state.proxy) {
+          await state.proxy.stop();
+        }
         return jsonResult(this.toAgentRun(state));
       },
     );

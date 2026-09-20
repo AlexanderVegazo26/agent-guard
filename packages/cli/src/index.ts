@@ -48,6 +48,10 @@ async function main(): Promise<void> {
       storeRoot: flagValue(rest, "--store"),
       escalate: rest.includes("--escalate"),
       configPath: flagValue(rest, "--config"),
+      // PRD3 F14 — `agentguard test --adversarial <profile>`; a bare
+      // `--adversarial` (no value follows, or the next token is another
+      // flag) defaults to the "default" profile.
+      adversarial: rest.includes("--adversarial") ? (flagValue(rest, "--adversarial") ?? "default") : undefined,
     });
     return;
   }

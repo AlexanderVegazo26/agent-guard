@@ -13,6 +13,7 @@ import {
 import { buildReportV1, formatConsole } from "@agent-guard/reporters";
 import { AnthropicDecisionEngine, AnthropicEscalationEngine, MockDecisionEngine, JevDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
 import { escalateReviews } from "@agent-guard/assertions";
+import { resolveProfile, summarizeMutationDimensions } from "@agent-guard/mutations";
 import { loadFixtureSuite } from "../fixtures.js";
 import { runFixture } from "../runner.js";
 
@@ -32,6 +33,17 @@ export interface TestCommandOptions {
   escalate?: boolean;
   /** Explicit `--config <path>`, overriding the default search for `agentguard.config.{ts,js,...}` in cwd (PRD2 G0b). */
   configPath?: string;
+  /**
+   * PRD3 F14 — `agentguard test --adversarial <profile>`. Set to a profile
+   * name (e.g. `"default"`) to compute and print the per-dimension
+   * mutation report ("Prompt injection 18/20 resisted") from the faults
+   * present in each fixture's own `run.json`, never a single score.
+   * `resolveProfile` is only used to validate the name and fail fast on a
+   * typo; the actual tally is driven by whichever faults a fixture
+   * declares, not by re-injecting the profile's faults into a live proxy —
+   * these are static golden/correct-behavior fixtures, not a live run.
+   */
+  adversarial?: string;
 }
 
 /**
@@ -63,6 +75,9 @@ export async function runTestCommand(options: TestCommandOptions): Promise<numbe
   }
 
   const engineKind = options.engine ?? "jev";
+  if (options.adversarial) resolveProfile(options.adversarial); // throws on an unknown profile name
+
+  const aggregateMutationDimensions: Record<string, { resisted: number; total: number }> = {};
 
   for (const fixture of fixtures) {
     const engine: DecisionEngine = !options.live
@@ -92,7 +107,18 @@ export async function runTestCommand(options: TestCommandOptions): Promise<numbe
       results = await escalateReviews(graph, results, escalationEngine);
     }
 
-    console.log(formatConsole(buildReportV1({ runId: fixture.name, decisions: results })));
+    let mutationDimensions: Record<string, { resisted: number; total: number }> | undefined;
+    if (options.adversarial) {
+      mutationDimensions = summarizeMutationDimensions(fixture.run.faults, results);
+      for (const [dimension, { resisted, total }] of Object.entries(mutationDimensions)) {
+        const bucket = aggregateMutationDimensions[dimension] ?? { resisted: 0, total: 0 };
+        bucket.resisted += resisted;
+        bucket.total += total;
+        aggregateMutationDimensions[dimension] = bucket;
+      }
+    }
+
+    console.log(formatConsole(buildReportV1({ runId: fixture.name, decisions: results, mutationDimensions })));
     const advisory = languageAdvisory(graph);
     if (advisory) console.log(`\n  ${advisory}`);
 
@@ -102,6 +128,18 @@ export async function runTestCommand(options: TestCommandOptions): Promise<numbe
 
     for (const [id, result] of Object.entries(results)) {
       allResults[`${fixture.name}::${id}`] = result;
+    }
+  }
+
+  if (options.adversarial) {
+    const entries = Object.entries(aggregateMutationDimensions);
+    console.log("\nMutation dimensions (adversarial):");
+    if (entries.length === 0) {
+      console.log("  (no mutation faults found in the fixtures run — nothing to report)");
+    } else {
+      for (const [dimension, { resisted, total }] of entries) {
+        console.log(`  ${dimension.padEnd(28)} ${resisted}/${total} resisted`);
+      }
     }
   }
 

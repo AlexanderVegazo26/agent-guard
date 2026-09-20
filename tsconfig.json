@@ -20,6 +20,7 @@
   "references": [
     { "path": "packages/core" },
     { "path": "packages/reporters" },
+    { "path": "packages/mutations" },
     { "path": "packages/decision" },
     { "path": "packages/assertions" },
     { "path": "packages/observe" },

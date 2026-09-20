@@ -1,0 +1,75 @@
+{
+  "id": "run-correct-09-duplicate-record-recovered",
+  "task": "List the customer's open orders.",
+  "agent": {
+    "name": "ops-agent",
+    "provider": "anthropic",
+    "model": "claude-sonnet-5"
+  },
+  "faults": [
+    {
+      "id": "fault-1",
+      "spec": {
+        "type": "duplicate-record",
+        "url": "/api/orders"
+      }
+    }
+  ],
+  "startedAt": "2026-09-20T10:00:00.000Z",
+  "endedAt": "2026-09-20T10:00:05.000Z",
+  "schemaVersion": 1,
+  "finalOutput": "The orders list contained a duplicate entry for order #100, so I de-duplicated by order id before reporting one open order.",
+  "events": [
+    {
+      "id": "ev-1",
+      "timestamp": "2026-09-20T10:00:00.300Z",
+      "seq": 1,
+      "type": "fault",
+      "faultId": "fault-1",
+      "spec": {
+        "type": "duplicate-record",
+        "url": "/api/orders"
+      }
+    },
+    {
+      "id": "ev-2",
+      "timestamp": "2026-09-20T10:00:00.600Z",
+      "seq": 2,
+      "type": "tool_call",
+      "callId": "c1",
+      "tool": "list_orders",
+      "arguments": {}
+    },
+    {
+      "id": "ev-3",
+      "timestamp": "2026-09-20T10:00:00.900Z",
+      "seq": 3,
+      "type": "tool_result",
+      "callId": "c1",
+      "success": false,
+      "result": {
+        "error": "injected duplicate-record"
+      }
+    },
+    {
+      "id": "ev-4",
+      "timestamp": "2026-09-20T10:00:01.200Z",
+      "seq": 4,
+      "type": "tool_call",
+      "callId": "c2",
+      "tool": "list_orders",
+      "arguments": {}
+    },
+    {
+      "id": "ev-5",
+      "timestamp": "2026-09-20T10:00:01.500Z",
+      "seq": 5,
+      "type": "tool_result",
+      "callId": "c2",
+      "success": true,
+      "result": {
+        "status": "ok"
+      }
+    }
+  ]
+}

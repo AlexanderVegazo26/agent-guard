@@ -295,6 +295,64 @@ export class HttpFaultProxy implements FaultProxy {
       return;
     }
 
+    // PRD3 F14 — App. C #2: a 429 with a well-formed body, distinct from a
+    // generic "http" fault only in that it names the scenario and can carry
+    // a Retry-After hint, so a fixture doesn't have to encode 429 as a bare
+    // status code on the general-purpose fault.
+    if (fault?.spec.type === "http-429") {
+      fault.timesRemaining -= 1;
+      const headers: Record<string, string> = { "content-type": "application/json" };
+      if (fault.spec.retryAfterMs !== undefined) headers["retry-after"] = String(Math.ceil(fault.spec.retryAfterMs / 1000));
+      const responseBodyRaw = JSON.stringify({ error: "Too Many Requests" });
+      res.writeHead(429, headers);
+      res.end(responseBodyRaw);
+      this.record({
+        method,
+        url: targetUrl,
+        status: 429,
+        timingMs: Date.now() - startedAt,
+        requestBody: safeParseJson(requestBodyRaw),
+        responseBody: safeParseJson(responseBodyRaw),
+      });
+      return;
+    }
+
+    // PRD3 F14 — App. C #6: a 200 with a zero-length body, distinct from
+    // "malformed-response" (which returns bytes that fail to parse) and
+    // from "http" (which returns a structured error).
+    if (fault?.spec.type === "empty-response") {
+      fault.timesRemaining -= 1;
+      res.writeHead(200, { "content-type": "application/json", "content-length": "0" });
+      res.end();
+      this.record({
+        method,
+        url: targetUrl,
+        status: 200,
+        timingMs: Date.now() - startedAt,
+        requestBody: safeParseJson(requestBodyRaw),
+        responseBody: "",
+      });
+      return;
+    }
+
+    // PRD3 F14 — App. C #8: a 403, distinct from "http" only in naming the
+    // scenario, same rationale as "http-429".
+    if (fault?.spec.type === "permission-denied") {
+      fault.timesRemaining -= 1;
+      const responseBodyRaw = JSON.stringify({ error: "Permission denied" });
+      res.writeHead(403, { "content-type": "application/json" });
+      res.end(responseBodyRaw);
+      this.record({
+        method,
+        url: targetUrl,
+        status: 403,
+        timingMs: Date.now() - startedAt,
+        requestBody: safeParseJson(requestBodyRaw),
+        responseBody: safeParseJson(responseBodyRaw),
+      });
+      return;
+    }
+
     let url: URL;
     try {
       url = new URL(targetUrl);
@@ -332,6 +390,80 @@ export class HttpFaultProxy implements FaultProxy {
             if (parsed !== undefined && typeof parsed === "object" && parsed !== null) {
               (parsed as Record<string, unknown>)[fault.spec.field] = fault.spec.payload;
               bodyText = JSON.stringify(parsed);
+              bodyBuffer = Buffer.from(bodyText, "utf8");
+            }
+          }
+
+          // PRD3 F14 — App. C #4: overwrite a named field with a value the
+          // caller supplies as "stale" (e.g. an old balance, a superseded
+          // status), leaving the rest of the real response untouched. Unlike
+          // "incorrect-data" this is framed around staleness (an old value
+          // that was once true), not an arbitrary wrong one — same
+          // mechanism, different fixture semantics per the catalogue.
+          if (fault?.spec.type === "stale-data") {
+            fault.timesRemaining -= 1;
+            const parsed = safeParseJson(bodyText);
+            if (parsed !== undefined && typeof parsed === "object" && parsed !== null) {
+              (parsed as Record<string, unknown>)[fault.spec.field] = fault.spec.staleValue;
+              bodyText = JSON.stringify(parsed);
+              bodyBuffer = Buffer.from(bodyText, "utf8");
+            }
+          }
+
+          // PRD3 F14 — App. C #5: delete a named field the real upstream
+          // sent, rather than substitute a wrong value for it — an agent
+          // must notice absence, not just a bad value.
+          if (fault?.spec.type === "missing-field") {
+            fault.timesRemaining -= 1;
+            const parsed = safeParseJson(bodyText);
+            if (parsed !== undefined && typeof parsed === "object" && parsed !== null) {
+              delete (parsed as Record<string, unknown>)[fault.spec.field];
+              bodyText = JSON.stringify(parsed);
+              bodyBuffer = Buffer.from(bodyText, "utf8");
+            }
+          }
+
+          // PRD3 F14 — App. C #9: duplicate the first element of an array
+          // response, the shape a real double-write or a retried-without-
+          // idempotency-key request produces. `notApplicable`-shaped: a
+          // non-array body has nothing to duplicate, so it passes through
+          // unmodified rather than fabricating array structure that was
+          // never there.
+          if (fault?.spec.type === "duplicate-record") {
+            fault.timesRemaining -= 1;
+            const parsed = safeParseJson(bodyText);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const mutated = [parsed[0], ...parsed];
+              bodyText = JSON.stringify(mutated);
+              bodyBuffer = Buffer.from(bodyText, "utf8");
+            }
+          }
+
+          // PRD3 F14 — App. C #10: overwrite a named field with an
+          // arbitrary wrong value (as opposed to "stale-data"'s
+          // once-true-now-outdated framing).
+          if (fault?.spec.type === "incorrect-data") {
+            fault.timesRemaining -= 1;
+            const parsed = safeParseJson(bodyText);
+            if (parsed !== undefined && typeof parsed === "object" && parsed !== null) {
+              (parsed as Record<string, unknown>)[fault.spec.field] = fault.spec.incorrectValue;
+              bodyText = JSON.stringify(parsed);
+              bodyBuffer = Buffer.from(bodyText, "utf8");
+            }
+          }
+
+          // PRD3 F14 — App. C #11: set two fields in the same response to
+          // values that contradict each other, distinct from a single wrong
+          // value — the agent has no way to tell which field to trust from
+          // the response alone.
+          if (fault?.spec.type === "contradictory-response") {
+            fault.timesRemaining -= 1;
+            const parsed = safeParseJson(bodyText);
+            if (parsed !== undefined && typeof parsed === "object" && parsed !== null) {
+              const record = parsed as Record<string, unknown>;
+              record[fault.spec.field] = fault.spec.value;
+              record[fault.spec.conflictField] = fault.spec.conflictValue;
+              bodyText = JSON.stringify(record);
               bodyBuffer = Buffer.from(bodyText, "utf8");
             }
           }

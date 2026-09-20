@@ -4,7 +4,7 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "references": [{ "path": "../core" }, { "path": "../decision" }, { "path": "../assertions" }, { "path": "../reporters" }, { "path": "../mutations" }],
+  "references": [{ "path": "../core" }],
   "include": ["src/**/*.ts"],
   "exclude": ["src/**/*.test.ts"]
 }

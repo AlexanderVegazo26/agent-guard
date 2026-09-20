@@ -1,3 +1,5 @@
+import * as http from "node:http";
+import type { AddressInfo } from "node:net";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -93,6 +95,48 @@ describe("AgentGuardMcpServer", () => {
     const run = readJson<{ faults: { id: string }[] }>(await client.callTool({ name: "agentguard_get_run", arguments: { runId } }));
     expect(run.faults).toHaveLength(1);
     expect(run.faults[0]!.id).toBe("fault-1");
+
+    await client.callTool({ name: "agentguard_finish_run", arguments: { runId } }); // stops the proxy this mutate started
+  });
+
+  it("PRD3 F14 acceptance: agentguard_mutate starts a real proxy, and a real request through it returns the injected fault", async () => {
+    const upstream = http.createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ upstream: true }));
+    });
+    await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
+    const upstreamPort = (upstream.address() as AddressInfo).port;
+
+    try {
+      const start = await client.callTool({ name: "agentguard_start_run", arguments: { task: "Do something." } });
+      const { runId } = readJson<{ runId: string }>(start);
+
+      const mutated = await client.callTool({
+        name: "agentguard_mutate",
+        arguments: { runId, fault: { type: "http-429", url: "/api/payment" } },
+      });
+      const { proxy } = readJson<{ proxy: { port: number } }>(mutated);
+      expect(proxy.port).toBeGreaterThan(0);
+
+      const response = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+        const req = http.request(
+          { host: "127.0.0.1", port: proxy.port, path: `http://127.0.0.1:${upstreamPort}/api/payment`, method: "GET" },
+          (res) => {
+            const chunks: Buffer[] = [];
+            res.on("data", (c: Buffer) => chunks.push(c));
+            res.on("end", () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks).toString("utf8") }));
+          },
+        );
+        req.on("error", reject);
+        req.end();
+      });
+
+      expect(response.status).toBe(429);
+
+      await client.callTool({ name: "agentguard_finish_run", arguments: { runId } });
+    } finally {
+      await new Promise((resolve) => upstream.close(resolve));
+    }
   });
 
   it("PRD3 F12: tags an injected fault event 'harness' (the server injected it, not the agent) and a caller-supplied event with no provenance 'self-reported'", async () => {
@@ -111,6 +155,8 @@ describe("AgentGuardMcpServer", () => {
     const faultEvent = run.events.find((e) => e.type === "fault");
     expect(toolCallEvent?.provenance).toBe("self-reported");
     expect(faultEvent?.provenance).toBe("harness");
+
+    await client.callTool({ name: "agentguard_finish_run", arguments: { runId } }); // stops the proxy this mutate started
   });
 
   it("agentguard_get_report returns null before any agentguard_assert call", async () => {

@@ -15,6 +15,7 @@
     "@agent-guard/core": "workspace:*",
     "@agent-guard/decision": "workspace:*",
     "@agent-guard/assertions": "workspace:*",
-    "@agent-guard/reporters": "workspace:*"
+    "@agent-guard/reporters": "workspace:*",
+    "@agent-guard/mutations": "workspace:*"
   }
 }

@@ -91,6 +91,64 @@ export const FaultSpec = z.discriminatedUnion("type", [
     url: z.string(),
     times: z.number().int().positive().optional(),
   }),
+  // PRD3 F14 — the remainder of PRD App. C's catalogue that `HttpFaultProxy`
+  // can synthesize as a fast, well-formed response (no real upstream body
+  // needed), the same shape as "http" but named for the specific scenario
+  // rather than left to a caller to encode via a bare status code.
+  z.object({
+    type: z.literal("http-429"),
+    url: z.string(),
+    retryAfterMs: z.number().int().nonnegative().optional(),
+    times: z.number().int().positive().optional(),
+  }),
+  z.object({
+    type: z.literal("empty-response"),
+    url: z.string(),
+    times: z.number().int().positive().optional(),
+  }),
+  z.object({
+    type: z.literal("permission-denied"),
+    url: z.string(),
+    times: z.number().int().positive().optional(),
+  }),
+  // PRD3 F14 — mutations of a REAL upstream response body, distinct from
+  // the synthesized faults above: these need an actual response to alter,
+  // so the proxy applies them after the upstream request completes rather
+  // than short-circuiting it.
+  z.object({
+    type: z.literal("stale-data"),
+    url: z.string(),
+    field: z.string(),
+    staleValue: z.unknown(),
+    times: z.number().int().positive().optional(),
+  }),
+  z.object({
+    type: z.literal("missing-field"),
+    url: z.string(),
+    field: z.string(),
+    times: z.number().int().positive().optional(),
+  }),
+  z.object({
+    type: z.literal("duplicate-record"),
+    url: z.string(),
+    times: z.number().int().positive().optional(),
+  }),
+  z.object({
+    type: z.literal("incorrect-data"),
+    url: z.string(),
+    field: z.string(),
+    incorrectValue: z.unknown(),
+    times: z.number().int().positive().optional(),
+  }),
+  z.object({
+    type: z.literal("contradictory-response"),
+    url: z.string(),
+    field: z.string(),
+    value: z.unknown(),
+    conflictField: z.string(),
+    conflictValue: z.unknown(),
+    times: z.number().int().positive().optional(),
+  }),
 ]);
 export type FaultSpec = z.infer<typeof FaultSpec>;
 
