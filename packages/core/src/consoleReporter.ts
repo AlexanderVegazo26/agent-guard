@@ -17,7 +17,7 @@ export function formatConsole(label: string, results: Record<string, AssertionRe
   }
 
   lines.push("", `  ${overallLabel(results)}`, "");
-  lines.push("  Confidence values are advisory — calibration is not yet validated (PRD §10.3).");
+  lines.push("  Confidence values are advisory — calibration is not yet validated (PRD §10.3) [PRD3:F19].");
   return lines.join("\n");
 }
 

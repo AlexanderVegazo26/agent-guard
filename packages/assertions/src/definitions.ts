@@ -12,10 +12,12 @@ import type { Polarity } from "./verdict.js";
  * actually matters (TRD §6.4) regardless of which window is in play.
  *
  * PRD3 D1: an earlier version of this comment claimed the narrower windows
- * were "declared but not implemented." That was true when written and
- * stopped being true once `selection.ts` implemented both; this file was
- * never updated. Selection window is not tracked on `AssertionDefinition`
- * for the same reason — see `selection.ts` for why it lives there instead.
+ * were "declared but not implemented [PRD3:F15]." That was true when written
+ * and stopped being true once `selection.ts` implemented both; this file
+ * was never updated. Selection window still isn't tracked on
+ * `AssertionDefinition` itself [PRD3:F15] — folding `selection.ts`'s
+ * `WINDOWS` map into this file's definitions so it lives in one place
+ * closes D1 fully.
  */
 
 export interface SingleQuestionDefinition {

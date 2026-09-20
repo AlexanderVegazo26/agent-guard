@@ -82,7 +82,7 @@ describe("escalateReviews", () => {
     expect(escalation.calls).toHaveLength(0);
   });
 
-  it("does not escalate a fan-out assertion's REVIEW — scope decision, not yet supported", async () => {
+  it("does not escalate a fan-out assertion's REVIEW — scope decision, not yet supported [PRD3:F15]", async () => {
     const graph = await buildGraph();
     const call = graph.byType("tool_call")[0]!;
     const engine = new MockDecisionEngine({ [`toolWasAppropriate::${call.id}`]: { type: "choice", choice: "appropriate", confidence: 0.3, probabilities: { appropriate: 0.3, unnecessary: 0.3, "wrong-tool": 0.2, "wrong-target": 0.2 } } });

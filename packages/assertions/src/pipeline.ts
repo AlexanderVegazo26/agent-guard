@@ -28,7 +28,7 @@ import { noulConfidence, noulVerdict, scoreVerdict } from "./verdict.js";
  *     when the union doesn't fit, then to fan-out caps with priority
  *     ordering, then to a capacity `REVIEW` (§6.5/§6.7)
  *
- * Not implemented in this build (see repo notes): the "tighten selection"
+ * Not implemented in this build [PRD3:F15]: the "tighten selection"
  * and "chunk with explicit aggregation" rungs of the §6.7 ladder. Every
  * assertion's selector is already a fixed, fairly minimal type-based
  * filter, and chunking is only sound for assertions with a declared
@@ -156,8 +156,8 @@ export async function evaluate(
   // split-batch or fan-out-cap route to get there. Every assertion
   // evaluated below the union-batch fast path now records which of the two
   // implemented rungs it took. `tighten-selection` and `chunk-aggregate`
-  // (TRD §6.7's remaining rungs) are still not implemented — see this
-  // function's own header — so no result is ever tagged with either.
+  // (TRD §6.7's remaining rungs) are still not implemented [PRD3:F15] —
+  // see this function's own header — so no result is ever tagged with either.
   for (const id of pending) {
     const plan = plans[id];
     let degradation: DegradationRecord = {

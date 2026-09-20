@@ -29,7 +29,7 @@ export interface ValidationRecord {
 }
 
 /**
- * PRD3 F19 — every deferred Noul assertion in F2/F3/F8/F9, and the
+ * [PRD3:F19] — every deferred Noul assertion in F2/F3/F8/F9, and the
  * calibration curve, are blocked on a defined answer to "what does it cost,
  * and how much does the real engine's answer move, to run this fixture
  * more than once against real Jev." This is that measurement, not a

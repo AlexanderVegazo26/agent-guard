@@ -5,8 +5,8 @@ import type { AgentEvent, AgentRun, Evidence, EvidenceLink, EvidenceRelation, Ev
  *
  * Pipeline: Events → Normalize → Extract → Link → EvidenceGraph.
  *
- * PRD3 D2: this comment used to say the "Verify-redaction" stage (TRD §5.1)
- * was intentionally not implemented. It was, before PRD2 G0a wired
+ * PRD3 D2: this comment used to claim the "Verify-redaction" stage (TRD
+ * §5.1) was out of scope. That stopped being true once PRD2 G0a wired
  * redaction into every capture path: `FilesystemRunStore.saveEvidence`
  * (`store.ts`) now runs `Redactor.verify()` as a defence-in-depth audit and
  * refuses to write on a finding. Redaction itself happens earlier, at
@@ -181,7 +181,7 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
         );
         // The sub-agent's own claim is ALSO compiled as an ordinary
         // agent_claim, tagged with its origin — an inter-agent
-        // noUnsupportedClaims (PRD2 F9, deferred) needs to check it the
+        // noUnsupportedClaims (PRD2 F9, deferred [PRD3:F19]) needs to check it the
         // same way any other claim is checked, not read it only off the
         // agent_result wrapper.
         if (event.claim) {
@@ -265,8 +265,9 @@ function splitClaims(
 // ---------------------------------------------------------------------------
 // Link — deterministic links only (TRD §3.3). The compiler never emits a
 // `contradicts` link with basis "deterministic" unless the contradiction is
-// mechanically checkable; everything softer would be "heuristic", and this
-// build does not implement a heuristic linker (see repo notes).
+// mechanically checkable; everything softer would be "heuristic", and a
+// heuristic linker is a deliberate non-goal (§4.1 point 2, "mechanical
+// selection, never summarisation") rather than a gap awaiting a feature.
 // ---------------------------------------------------------------------------
 
 const SUCCESS_PATTERNS = [

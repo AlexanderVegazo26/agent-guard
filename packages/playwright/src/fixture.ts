@@ -220,7 +220,8 @@ export class AgentGuardFixture {
     }
     // The network call the tool made has very likely already completed —
     // interleave it before the result, giving a more faithful ordering
-    // than draining only at the very end (see repo notes on this heuristic).
+    // than draining only at the very end. Best-effort ordering heuristic,
+    // not a guarantee: `seq` (not arrival order) is what assertions rely on.
     this.drainProxyEvents();
     this.push({ type: "tool_result", callId: event.callId, success: event.success, result: event.result });
   }

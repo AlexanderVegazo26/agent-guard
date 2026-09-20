@@ -32,9 +32,9 @@ export interface ReviewPrCommandOptions {
  * `claimedTestsExist`, and only as a claim to verify against the diff.
  *
  * `diffMatchesTask`, `noUnrelatedChanges`, and the semantic half of
- * `noSecretsInDiff` need a live decision engine and are not implemented
- * here — see `packages/assertions/src/codingVertical.ts`'s own doc
- * comment for the exact boundary.
+ * `noSecretsInDiff` need a live decision engine and are not implemented [PRD3:F19].
+ * See `packages/assertions/src/codingVertical.ts`'s own doc comment for the
+ * exact boundary.
  */
 export async function runReviewPrCommand(options: ReviewPrCommandOptions): Promise<number> {
   let diffText: string;

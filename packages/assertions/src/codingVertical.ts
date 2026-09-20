@@ -8,7 +8,7 @@
  * `network` evidence types would be a worse fit than a dedicated,
  * narrower module. `diffMatchesTask`, `noUnrelatedChanges`, and the
  * semantic half of `noSecretsInDiff` need a live decision engine and are
- * NOT implemented here — this file is exactly PRD2's stated deterministic
+ * NOT implemented here [PRD3:F19] — this file is exactly PRD2's stated deterministic
  * subset: `testsAdded`, `testsPassed`, `claimedTestsExist`,
  * `dependencyRisk`, and the mechanical half of `noSecretsInDiff`.
  *
@@ -120,7 +120,7 @@ const BACKTICKED_IDENTIFIER = /`([^`]+)`/g;
  * somewhere in a touched test file's patch text. A description naming a
  * test in plain prose ("I added a test for the login flow") is not
  * checked — that needs judgment, not a string search, and is exactly the
- * kind of claim `diffMatchesTask` (deferred, needs live Jev) would cover.
+ * kind of claim `diffMatchesTask` (deferred [PRD3:F19], needs live Jev) would cover.
  *
  * A backtick span only counts as a claimed test when its sentence
  * contains both a test word ("test"/"tests"/"spec"/"specs") AND an
@@ -185,7 +185,7 @@ export function claimedTestsExist(description: string, files: ChangedFile[]): Co
  * in the diff or not), but whether it's *risky* is a judgment this
  * function doesn't make. It flags for human review rather than failing
  * outright — the F3 supply-chain lens (checking a new package against
- * known-bad advisories) is not implemented here.
+ * known-bad advisories) is not implemented here [PRD3:F14].
  */
 export function dependencyRisk(changes: DependencyChange[]): CodingVerdict {
   const added = changes.flatMap((c) => c.added.map((pkg) => `${pkg} (${c.manifestPath})`));
@@ -207,7 +207,7 @@ export function dependencyRisk(changes: DependencyChange[]): CodingVerdict {
  * *object key name*, which a raw diff's added lines don't have. The
  * semantic half (a human-readable but non-pattern-matching secret, or a
  * judgment call about whether a matched string is actually sensitive in
- * context) needs live Jev and is not implemented here.
+ * context) needs live Jev and is not implemented here [PRD3:F19].
  */
 const SECRET_SHAPE_PATTERNS: ReadonlyArray<{ name: string; pattern: RegExp }> = [
   { name: "generic API key prefix", pattern: /\bsk-[A-Za-z0-9_-]{16,}/ },

@@ -15,8 +15,8 @@ function sha256(buffer: Buffer): string {
  * `agentguard replay <run-id>` re-runs the evaluation pipeline over stored
  * evidence with no browser, agent or network (§10.1).
  *
- * Not implemented here: `snapshots/` and `trace/` (no browser capture
- * exists in this build to produce them).
+ * Not implemented here [PRD3:F13]: `snapshots/` and `trace/` (no browser
+ * capture exists in this build to produce them).
  *
  * Redaction is still primarily the caller's job — it runs at capture, not
  * at compile time (TRD §8; `TranscriptAdapter` and `AgentGuardFixture` both
