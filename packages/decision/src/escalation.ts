@@ -31,7 +31,8 @@ export interface EscalationResult {
 }
 
 export interface EscalationEngine {
-  explain(request: EscalationRequest): Promise<EscalationResult>;
+  /** API-009 — optional cancellation signal; see `DecisionEngine.decide`'s doc comment for the contract. */
+  explain(request: EscalationRequest, signal?: AbortSignal): Promise<EscalationResult>;
 }
 
 export type EscalationScript = Record<string, string> | ((request: EscalationRequest) => string);
@@ -42,7 +43,8 @@ export class MockEscalationEngine implements EscalationEngine {
 
   constructor(private readonly script: EscalationScript) {}
 
-  async explain(request: EscalationRequest): Promise<EscalationResult> {
+  async explain(request: EscalationRequest, signal?: AbortSignal): Promise<EscalationResult> {
+    signal?.throwIfAborted();
     this.calls.push(request);
     const explanation = typeof this.script === "function" ? this.script(request) : this.script[request.assertionId];
     if (explanation === undefined) {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AnthropicEscalationEngine } from "./anthropicEscalation.js";
 
 /**
@@ -31,5 +31,30 @@ describe("AnthropicEscalationEngine construction — API key resolution", () => 
   it("prefers an explicit apiKey over ANTHROPIC_API_KEY", () => {
     process.env.ANTHROPIC_API_KEY = "env-key";
     expect(() => new AnthropicEscalationEngine({ apiKey: "explicit-key" })).not.toThrow();
+  });
+});
+
+/**
+ * API-009 — `explain()` accepts an optional `AbortSignal`. This is the
+ * provable half of cancellation without a live abort-mid-flight scenario:
+ * an already-aborted signal must stop the call before it ever reaches the
+ * network, not just get passed along and ignored.
+ */
+describe("AnthropicEscalationEngine — AbortSignal (API-009)", () => {
+  it("never calls fetch when the signal is already aborted", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const engine = new AnthropicEscalationEngine({ apiKey: "k" });
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      engine.explain(
+        { assertionId: "a1", question: { type: "noul", instructions: "x" }, state: { task: "", injectedFaults: [], claims: [], evidence: [], links: [] }, priorConfidence: 0.5 },
+        controller.signal,
+      ),
+    ).rejects.toThrow();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });

@@ -41,7 +41,10 @@ export class AnthropicEscalationEngine implements EscalationEngine {
     this.model = config.model ?? DEFAULT_MODEL;
   }
 
-  async explain(request: EscalationRequest): Promise<EscalationResult> {
+  async explain(request: EscalationRequest, signal?: AbortSignal): Promise<EscalationResult> {
+    // API-009 — see AnthropicDecisionEngine.decide's comment: same
+    // single-attempt, `fetch`-backed contract.
+    signal?.throwIfAborted();
     const response = await fetch(API_URL, {
       method: "POST",
       headers: {
@@ -54,6 +57,7 @@ export class AnthropicEscalationEngine implements EscalationEngine {
         max_tokens: 400,
         messages: [{ role: "user", content: buildPrompt(request) }],
       }),
+      signal,
     });
 
     if (!response.ok) {

@@ -28,6 +28,7 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
 import { BasicTracerProvider, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { resolveOtlpEndpoint } from "./configLoader.js";
 
 export interface EngineSpan {
   name: "engine.decide";
@@ -42,7 +43,7 @@ export interface EngineSpan {
 }
 
 export function observabilityEnabled(): boolean {
-  return Boolean(process.env.OTEL_EXPORTER_OTLP_ENDPOINT);
+  return Boolean(resolveOtlpEndpoint());
 }
 
 let provider: BasicTracerProvider | undefined;

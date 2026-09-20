@@ -34,7 +34,10 @@ export class AnthropicFixProposerEngine implements FixProposerEngine {
     this.model = config.model ?? DEFAULT_MODEL;
   }
 
-  async propose(request: FixProposerRequest): Promise<FixProposerResult> {
+  async propose(request: FixProposerRequest, signal?: AbortSignal): Promise<FixProposerResult> {
+    // API-009 — see AnthropicDecisionEngine.decide's comment: same
+    // single-attempt, `fetch`-backed contract.
+    signal?.throwIfAborted();
     const response = await fetch(API_URL, {
       method: "POST",
       headers: {
@@ -47,6 +50,7 @@ export class AnthropicFixProposerEngine implements FixProposerEngine {
         max_tokens: 900,
         messages: [{ role: "user", content: buildPrompt(request) }],
       }),
+      signal,
     });
 
     if (!response.ok) {

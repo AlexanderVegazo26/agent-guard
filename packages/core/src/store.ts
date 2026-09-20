@@ -3,7 +3,28 @@ import { existsSync } from "node:fs";
 import { appendFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DefaultRedactor, type Redactor } from "./redaction.js";
-import type { Adjudication, AgentRun, AssertionResult, Evidence, EvidenceLink } from "./schema.js";
+import {
+  Adjudication,
+  AgentRun,
+  AssertionResult,
+  Evidence,
+  EvidenceLink,
+} from "./schema.js";
+import { z } from "zod";
+
+const RunManifestSchema = z.object({
+  schemaVersion: z.literal(1),
+  files: z.record(z.string(), z.string()),
+});
+
+const StoredEvidenceSchema = z.object({
+  task: z.string(),
+  items: z.array(Evidence),
+  links: z.array(EvidenceLink),
+});
+
+const AdjudicationsMapSchema = z.record(z.string(), Adjudication);
+const DecisionsMapSchema = z.record(z.string(), AssertionResult);
 
 function sha256(buffer: Buffer): string {
   return createHash("sha256").update(buffer).digest("hex");
@@ -117,7 +138,7 @@ export class FilesystemRunStore implements RunStore {
       const manifestPath = path.join(dir, "manifest.json");
       let manifest: RunManifest = { schemaVersion: 1, files: {} };
       if (existsSync(manifestPath)) {
-        manifest = JSON.parse(await readFile(manifestPath, "utf8")) as RunManifest;
+        manifest = RunManifestSchema.parse(JSON.parse(await readFile(manifestPath, "utf8")));
       }
       manifest.files[relativeName] = sha256(Buffer.from(content, "utf8"));
       await writeFile(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
@@ -207,14 +228,14 @@ export class FilesystemRunStore implements RunStore {
     if (!dir) return null;
     const filePath = path.join(dir, "adjudications.json");
     if (!existsSync(filePath)) return null;
-    return JSON.parse(await readFile(filePath, "utf8")) as Record<string, Adjudication>;
+    return AdjudicationsMapSchema.parse(JSON.parse(await readFile(filePath, "utf8")));
   }
 
   async loadRun(runId: string): Promise<AgentRun | null> {
     const dir = await this.runDirFor(runId);
     if (!dir) return null;
     const raw = await readFile(path.join(dir, "run.json"), "utf8");
-    return JSON.parse(raw) as AgentRun;
+    return AgentRun.parse(JSON.parse(raw));
   }
 
   async loadEvidence(runId: string): Promise<StoredEvidence | null> {
@@ -222,7 +243,7 @@ export class FilesystemRunStore implements RunStore {
     if (!dir) return null;
     const filePath = path.join(dir, "evidence.json");
     if (!existsSync(filePath)) return null;
-    return JSON.parse(await readFile(filePath, "utf8")) as StoredEvidence;
+    return StoredEvidenceSchema.parse(JSON.parse(await readFile(filePath, "utf8")));
   }
 
   async loadDecisions(runId: string): Promise<Record<string, AssertionResult> | null> {
@@ -230,7 +251,7 @@ export class FilesystemRunStore implements RunStore {
     if (!dir) return null;
     const filePath = path.join(dir, "decisions.json");
     if (!existsSync(filePath)) return null;
-    return JSON.parse(await readFile(filePath, "utf8")) as Record<string, AssertionResult>;
+    return DecisionsMapSchema.parse(JSON.parse(await readFile(filePath, "utf8")));
   }
 
   async loadManifest(runId: string): Promise<RunManifest | null> {
@@ -238,7 +259,7 @@ export class FilesystemRunStore implements RunStore {
     if (!dir) return null;
     const filePath = path.join(dir, "manifest.json");
     if (!existsSync(filePath)) return null;
-    return JSON.parse(await readFile(filePath, "utf8")) as RunManifest;
+    return RunManifestSchema.parse(JSON.parse(await readFile(filePath, "utf8")));
   }
 
   async listRunIds(): Promise<string[]> {

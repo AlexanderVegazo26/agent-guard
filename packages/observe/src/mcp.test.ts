@@ -214,7 +214,15 @@ describe("ObservingTransport", () => {
     // No tool_call/tool_result was recorded (nothing was actually
     // called) — only the guard's own decision.
     expect(events).toEqual([
-      { kind: "guard_decision", tool: "delete_all_data", arguments: {}, decision: "block", reason: expect.stringContaining("delete_all_data"), callId: "1" },
+      {
+        kind: "guard_decision",
+        tool: "delete_all_data",
+        arguments: {},
+        decision: "block",
+        reason: expect.stringContaining("delete_all_data"),
+        reasonCode: "blocked_tool",
+        callId: "1",
+      },
     ]);
 
     // The caller still gets a real response — a synthesized JSON-RPC
@@ -238,6 +246,34 @@ describe("ObservingTransport", () => {
 
     expect(receivedByServer).toEqual(request);
     expect(events).toEqual([{ kind: "tool_call", callId: "1", tool: "add_todo", arguments: { text: "milk" } }]);
+  });
+
+  it("API-004: a guard that throws denies the call instead of silently allowing it through (fail-closed)", async () => {
+    const [client, server] = createLinkedPair();
+    const events: CapturedEvent[] = [];
+    // A blockedArgumentPatterns entry whose `test()` itself throws — this
+    // reaches inside evaluateGuard's own loop (not the safeStringify catch,
+    // which only guards JSON.stringify), forcing evaluateGuard to throw
+    // rather than return a decision.
+    const throwingPattern = { test: () => { throw new Error("boom"); }, source: "boom" } as unknown as RegExp;
+    const observed = new ObservingTransport(client, (e) => events.push(e), {
+      guard: { blockedArgumentPatterns: [throwingPattern] },
+    });
+
+    let serverSawIt = false;
+    server.onmessage = () => {
+      serverSawIt = true;
+    };
+
+    await expect(
+      observed.send({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "delete_all_data", arguments: {} } }),
+    ).rejects.toThrow("boom");
+
+    // The defining property of fail-closed: the real transport never saw
+    // the call. A guard that errors must not be equivalent to a guard that
+    // allowed the call through.
+    expect(serverSawIt).toBe(false);
+    expect(events).toEqual([]);
   });
 
   it("does not intercept a non-tools/call request (e.g. resources/list)", async () => {

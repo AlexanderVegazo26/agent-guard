@@ -39,7 +39,8 @@ export interface FixProposerResult {
 }
 
 export interface FixProposerEngine {
-  propose(request: FixProposerRequest): Promise<FixProposerResult>;
+  /** API-009 — optional cancellation signal; see `DecisionEngine.decide`'s doc comment for the contract. */
+  propose(request: FixProposerRequest, signal?: AbortSignal): Promise<FixProposerResult>;
 }
 
 export type FixProposerScript = FixProposerResult | ((request: FixProposerRequest) => FixProposerResult);
@@ -50,7 +51,8 @@ export class MockFixProposerEngine implements FixProposerEngine {
 
   constructor(private readonly script: FixProposerScript) {}
 
-  async propose(request: FixProposerRequest): Promise<FixProposerResult> {
+  async propose(request: FixProposerRequest, signal?: AbortSignal): Promise<FixProposerResult> {
+    signal?.throwIfAborted();
     this.calls.push(request);
     return typeof this.script === "function" ? this.script(request) : this.script;
   }

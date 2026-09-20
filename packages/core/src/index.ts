@@ -14,3 +14,4 @@ export * from "./exitCode.js";
 export * from "./transcriptAdapter.js";
 export * from "./captureSink.js";
 export * from "./observability.js";
+export * from "./buildInfo.js";

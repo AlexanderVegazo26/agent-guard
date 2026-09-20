@@ -93,6 +93,15 @@ export function resolveAnthropicApiKey(explicit?: string): string | undefined {
   return explicit ?? process.env.ANTHROPIC_API_KEY;
 }
 
+/**
+ * API-003 — same pattern as {@link resolveAnthropicApiKey}: the one place
+ * `OTEL_EXPORTER_OTLP_ENDPOINT`'s ambient fallback is read, so
+ * `packages/core/src/observability.ts` doesn't read `process.env` itself.
+ */
+export function resolveOtlpEndpoint(explicit?: string): string | undefined {
+  return explicit ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+}
+
 function findConfigFile(cwd: string): string | null {
   for (const name of CONFIG_FILENAMES) {
     const candidate = path.join(cwd, name);

@@ -18,6 +18,7 @@ import { runTokensCommand } from "./commands/tokens.js";
 import { runValidateLiveCommand } from "./commands/validateLive.js";
 import { runReviewPrCommand } from "./commands/reviewPr.js";
 import { runAuditFixturesCommand } from "./commands/auditFixtures.js";
+import { getBuildInfo } from "@alexvegman/core";
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2);
@@ -25,6 +26,16 @@ async function main(): Promise<void> {
   if (!command || command === "--help" || command === "-h") {
     printHelp();
     process.exitCode = command ? 0 : 1;
+    return;
+  }
+
+  // PKG-010 — incident response needs a fast, scriptable way to ask "what
+  // is actually running" (version + commit), independent of `doctor`
+  // (which reports environment health, not build identity).
+  if (command === "--version" || command === "-v" || command === "version") {
+    const { version, commit } = getBuildInfo(import.meta.url);
+    console.log(`agentguard ${version} (commit: ${commit})`);
+    process.exitCode = 0;
     return;
   }
 
@@ -319,6 +330,7 @@ function printHelp(): void {
     [
       "agentguard <command> [options]",
       "",
+      "  --version, -v, version                        Print the running CLI's version and build commit",
       "  init                                          Scaffold config + .agentguard/ + fixtures/ directories",
       "  test [--fixtures <dir>] [--live] [--engine jev|anthropic] [--escalate] [--store <dir>] [--config <path>]   Run the golden suite (mock engine by default; --live selects a real one, jev by default)",
       "  replay <run-id> [--live] [--escalate] [--assertions a,b] [--store <dir>] [--config <path>]   Re-evaluate a stored run",

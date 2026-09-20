@@ -45,16 +45,26 @@ export class JevDecisionEngine implements DecisionEngine {
     return { tokenBudget: TOKEN_BUDGET, supportsBatch: true, primitives: ["noul", "score", "choice"] };
   }
 
-  async decide(state: DecisionState, questions: QuestionSet): Promise<DecisionResult> {
+  async decide(state: DecisionState, questions: QuestionSet, signal?: AbortSignal): Promise<DecisionResult> {
+    // API-009 — check before starting so an already-aborted signal never
+    // issues the request. `systemOne`'s own `signal` option (the SDK's
+    // `RequestOptions.signal`, verified against `@typesafe-ai/sdk@0.6.0`'s
+    // type declarations) also cancels a request already in flight, and
+    // covers every retry `systemOne` performs internally — there is no
+    // separate retry loop in this file to check between.
+    signal?.throwIfAborted();
     const sdkQuestions: Questions = {};
     for (const [id, question] of Object.entries(questions)) {
       sdkQuestions[id] = toSdkQuestion(question);
     }
 
-    const result = await this.client.systemOne({
-      state: state as unknown as Parameters<TypeSafeClient["systemOne"]>[0]["state"],
-      questions: sdkQuestions,
-    });
+    const result = await this.client.systemOne(
+      {
+        state: state as unknown as Parameters<TypeSafeClient["systemOne"]>[0]["state"],
+        questions: sdkQuestions,
+      },
+      { signal },
+    );
 
     const answers: Record<string, DecisionAnswer> = {};
     for (const [id, answer] of Object.entries(result.answers)) {

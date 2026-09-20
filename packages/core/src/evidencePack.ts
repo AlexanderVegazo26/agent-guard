@@ -3,6 +3,20 @@ import { existsSync } from "node:fs";
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DefaultRedactor, type Redactor } from "./redaction.js";
+import { z } from "zod";
+
+const EvidencePackManifestSchema = z.object({
+  runId: z.string(),
+  schemaVersion: z.literal(1),
+  agentguardVersion: z.string(),
+  generatedAt: z.string(),
+  files: z.record(z.string(), z.string()),
+  redactionAudit: z.object({ clean: z.boolean(), findingCount: z.number() }),
+});
+
+const EvidenceItemsOnlySchema = z.object({
+  items: z.array(z.object({ id: z.string(), content: z.unknown() })).optional(),
+});
 
 /**
  * PRD2 F4 — a run directory becomes a tamper-evident, exportable record.
@@ -98,7 +112,7 @@ export async function buildEvidencePack(
   const evidencePath = path.join(outDir, "evidence.json");
   let redactionAudit = { clean: true, findingCount: 0 };
   if (existsSync(evidencePath)) {
-    const evidence = JSON.parse(await readFile(evidencePath, "utf8")) as { items?: Array<{ id: string; content: unknown }> };
+    const evidence = EvidenceItemsOnlySchema.parse(JSON.parse(await readFile(evidencePath, "utf8")));
     if (evidence.items) {
       const audit = redactor.verify(evidence.items.map((item) => ({ id: item.id, content: item.content })));
       redactionAudit = { clean: audit.clean, findingCount: audit.findings.length };
@@ -139,7 +153,7 @@ export async function verifyEvidencePack(packDir: string): Promise<EvidencePackV
   if (!existsSync(manifestPath)) {
     throw new Error(`verifyEvidencePack: no manifest.json found in "${packDir}"`);
   }
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as EvidencePackManifest;
+  const manifest = EvidencePackManifestSchema.parse(JSON.parse(await readFile(manifestPath, "utf8")));
 
   const onDisk = await computeFileHashes(packDir);
   delete onDisk["manifest.json"]; // the manifest doesn't hash itself

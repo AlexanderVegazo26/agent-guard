@@ -48,6 +48,18 @@ describe("FilesystemRunStore", () => {
     expect(await store.loadRun("nonexistent")).toBeNull();
   });
 
+  it("rejects a run.json that doesn't match the AgentRun schema instead of returning it uncast (API-010)", async () => {
+    const dir = await store.saveRun(RUN);
+    await writeFile(path.join(dir, "run.json"), JSON.stringify({ id: "run-store-test", task: 42 }), "utf8");
+    await expect(store.loadRun("run-store-test")).rejects.toThrow();
+  });
+
+  it("rejects a manifest.json with an unexpected shape instead of returning it uncast (API-010)", async () => {
+    const dir = await store.saveRun(RUN);
+    await writeFile(path.join(dir, "manifest.json"), JSON.stringify({ schemaVersion: 2, files: "not-an-object" }), "utf8");
+    await expect(store.loadManifest("run-store-test")).rejects.toThrow();
+  });
+
   it("round-trips evidence and decisions once a run directory exists", async () => {
     await store.saveRun(RUN);
     const evidence = { task: RUN.task, items: [], links: [] };

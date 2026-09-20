@@ -33,6 +33,15 @@ jobs:
       - name: Test
         run: bun run test
 
+      - name: Dependency vulnerability scan (osv-scanner)
+        # SUP-003 — bun.lock has no npm-audit equivalent. osv-scanner isn't
+        # published to npm (confirmed: `bunx osv-scanner` 404s against the
+        # registry), so it's installed from its own GitHub release instead.
+        run: |
+          curl -sL https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64 -o /usr/local/bin/osv-scanner
+          chmod +x /usr/local/bin/osv-scanner
+          osv-scanner scan --lockfile=bun.lock
+
       - name: Audit fixture discriminability
         run: node packages/cli/dist/index.js audit-fixtures --fixtures fixtures/golden
 

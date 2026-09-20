@@ -53,6 +53,7 @@ export interface CapturedGuardDecision {
   arguments: unknown;
   decision: GuardResult["decision"];
   reason: string;
+  reasonCode: GuardResult["reasonCode"];
   callId: string;
 }
 
@@ -177,6 +178,7 @@ export class ObservingTransport implements Transport {
       arguments: message.params.arguments,
       decision: result.decision,
       reason: result.reason,
+      reasonCode: result.reasonCode,
       callId,
     });
 

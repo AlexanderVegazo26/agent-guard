@@ -57,7 +57,16 @@ type EventDraft =
     }
   | { type: "fault"; faultId: string; spec: FaultSpec }
   | { type: "tool_definition"; tool: string; description?: string; inputSchema?: unknown }
-  | { type: "guard_decision"; tool: string; arguments: unknown; decision: "allow" | "block" | "review"; reason: string; callId?: string };
+  | {
+      type: "guard_decision";
+      tool: string;
+      arguments: unknown;
+      decision: "allow" | "block" | "review";
+      reason: string;
+      /** API-008 — stable, programmatic counterpart to `reason`. Optional: older captured events predate this field. */
+      reasonCode?: string;
+      callId?: string;
+    };
 
 /**
  * PRD §9.1 — the `agentguard` test fixture. `observe()` wraps the agent's
@@ -223,7 +232,15 @@ export class AgentGuardFixture {
       return;
     }
     if (event.kind === "guard_decision") {
-      this.push({ type: "guard_decision", tool: event.tool, arguments: event.arguments, decision: event.decision, reason: event.reason, callId: event.callId });
+      this.push({
+        type: "guard_decision",
+        tool: event.tool,
+        arguments: event.arguments,
+        decision: event.decision,
+        reason: event.reason,
+        reasonCode: event.reasonCode,
+        callId: event.callId,
+      });
       return;
     }
     // The network call the tool made has very likely already completed —

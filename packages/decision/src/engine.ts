@@ -44,7 +44,17 @@ export interface EngineCapabilities {
 }
 
 export interface DecisionEngine {
-  decide(state: DecisionState, questions: QuestionSet): Promise<DecisionResult>;
+  /**
+   * API-009 — `signal` is optional so every existing call site and mock
+   * implementation keeps compiling unchanged. An implementation that
+   * makes a real network call checks `signal?.throwIfAborted()` before
+   * starting and passes `signal` into the underlying HTTP call so an
+   * already-aborted signal never starts a request, and — for
+   * implementations built on `fetch` or the `@typesafe-ai/sdk` client,
+   * both of which honor `AbortSignal` themselves — a request already in
+   * flight is genuinely cancelled, not just left to run to completion.
+   */
+  decide(state: DecisionState, questions: QuestionSet, signal?: AbortSignal): Promise<DecisionResult>;
   capabilities(): EngineCapabilities;
 }
 

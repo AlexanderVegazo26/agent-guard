@@ -1,4 +1,4 @@
-import type { GuardDecisionKind } from "@alexvegman/core";
+import type { GuardDecisionKind, GuardReasonCode } from "@alexvegman/core";
 
 /**
  * PRD2 F2 — the online guard's deterministic pre-action check. Evaluated
@@ -26,22 +26,28 @@ export interface GuardPolicy {
 export interface GuardResult {
   decision: GuardDecisionKind;
   reason: string;
+  /** API-008 — stable, programmatic counterpart to `reason`; `reason` stays free text for humans. */
+  reasonCode: GuardReasonCode;
 }
 
-const ALLOW: GuardResult = { decision: "allow", reason: "no policy rule matched" };
+const ALLOW: GuardResult = { decision: "allow", reason: "no policy rule matched", reasonCode: "no_rule_matched" };
 
 export function evaluateGuard(tool: string, args: unknown, policy: GuardPolicy): GuardResult {
   if (policy.blockedTools?.includes(tool)) {
-    return { decision: "block", reason: `tool "${tool}" is on the blocked-tools list` };
+    return { decision: "block", reason: `tool "${tool}" is on the blocked-tools list`, reasonCode: "blocked_tool" };
   }
   if (policy.reviewTools?.includes(tool)) {
-    return { decision: "review", reason: `tool "${tool}" requires review before it may proceed` };
+    return { decision: "review", reason: `tool "${tool}" requires review before it may proceed`, reasonCode: "review_required" };
   }
 
   const argsText = safeStringify(args);
   for (const pattern of policy.blockedArgumentPatterns ?? []) {
     if (pattern.test(argsText)) {
-      return { decision: "block", reason: `arguments to "${tool}" matched a blocked pattern (${pattern.source})` };
+      return {
+        decision: "block",
+        reason: `arguments to "${tool}" matched a blocked pattern (${pattern.source})`,
+        reasonCode: "blocked_argument_pattern",
+      };
     }
   }
 

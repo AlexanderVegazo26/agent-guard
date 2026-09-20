@@ -55,7 +55,12 @@ export class AnthropicDecisionEngine implements DecisionEngine {
     return { tokenBudget: TOKEN_BUDGET, supportsBatch: true, primitives: ["noul", "score", "choice"] };
   }
 
-  async decide(state: DecisionState, questions: QuestionSet): Promise<DecisionResult> {
+  async decide(state: DecisionState, questions: QuestionSet, signal?: AbortSignal): Promise<DecisionResult> {
+    // API-009 — check before starting so an already-aborted signal never
+    // issues the request; `fetch`'s own `signal` option genuinely cancels
+    // a request already in flight (there is no retry loop here to check
+    // between — this file makes exactly one attempt per call).
+    signal?.throwIfAborted();
     const tool = buildTool(questions);
 
     const response = await fetch(API_URL, {
@@ -72,6 +77,7 @@ export class AnthropicDecisionEngine implements DecisionEngine {
         tool_choice: { type: "tool", name: TOOL_NAME },
         messages: [{ role: "user", content: buildPrompt(state, questions) }],
       }),
+      signal,
     });
 
     if (!response.ok) {

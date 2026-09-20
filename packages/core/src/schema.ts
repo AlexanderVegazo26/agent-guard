@@ -266,12 +266,23 @@ export const AgentResultEvent = BaseEvent.extend({
 export const GuardDecisionKind = z.enum(["allow", "block", "review"]);
 export type GuardDecisionKind = z.infer<typeof GuardDecisionKind>;
 
+// API-008 — `reason` is free-text prose meant for humans; it is not stable
+// across wording changes and cannot be switched on programmatically. This
+// is the enumerated, stable counterpart for automated handling, kept
+// alongside (not instead of) `reason`. The set is exhaustive over the real
+// call sites in `packages/observe/src/guard.ts` that construct a
+// non-`allow` `GuardResult` today — deliberately not a speculative superset.
+export const GuardReasonCode = z.enum(["no_rule_matched", "blocked_tool", "review_required", "blocked_argument_pattern"]);
+export type GuardReasonCode = z.infer<typeof GuardReasonCode>;
+
 export const GuardDecisionEvent = BaseEvent.extend({
   type: z.literal("guard_decision"),
   tool: z.string(),
   arguments: z.unknown(),
   decision: GuardDecisionKind,
   reason: z.string(),
+  /** Stable, programmatic counterpart to `reason` (API-008). Optional for backward compatibility with events recorded before this field existed. */
+  reasonCode: GuardReasonCode.optional(),
   /** The tool_call this decision governed, when the guard sits in front of a real MCP transport. */
   callId: z.string().optional(),
 });

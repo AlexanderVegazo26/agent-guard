@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AnthropicFixProposerEngine } from "./anthropicFixProposer.js";
 
 /**
@@ -28,5 +28,22 @@ describe("AnthropicFixProposerEngine construction — API key resolution", () =>
   it("prefers an explicit apiKey over ANTHROPIC_API_KEY", () => {
     process.env.ANTHROPIC_API_KEY = "env-key";
     expect(() => new AnthropicFixProposerEngine({ apiKey: "explicit-key" })).not.toThrow();
+  });
+});
+
+/** API-009 — see anthropicEscalation.test.ts for the rationale. */
+describe("AnthropicFixProposerEngine — AbortSignal (API-009)", () => {
+  it("never calls fetch when the signal is already aborted", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const engine = new AnthropicFixProposerEngine({ apiKey: "k" });
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      engine.propose({ targetPath: "AGENTS.md", currentText: "x", recurringEvidence: [] }, controller.signal),
+    ).rejects.toThrow();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });

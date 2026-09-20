@@ -27,6 +27,7 @@ const EXECUTION_PATH_MODULES = [
   "packages/decision/src/anthropicDecision.ts",
   "packages/decision/src/anthropicEscalation.ts",
   "packages/decision/src/anthropicFixProposer.ts",
+  "packages/core/src/observability.ts",
 ];
 
 describe("API-003 — execution-path modules do not read process.env directly", () => {
@@ -38,5 +39,10 @@ describe("API-003 — execution-path modules do not read process.env directly", 
   it("resolveAnthropicApiKey is the one place ANTHROPIC_API_KEY's ambient fallback is read", async () => {
     const content = await readFile(path.join(REPO_ROOT, "packages/core/src/configLoader.ts"), "utf8");
     expect(content).toMatch(/process\.env\.ANTHROPIC_API_KEY/);
+  });
+
+  it("resolveOtlpEndpoint is the one place OTEL_EXPORTER_OTLP_ENDPOINT's ambient fallback is read", async () => {
+    const content = await readFile(path.join(REPO_ROOT, "packages/core/src/configLoader.ts"), "utf8");
+    expect(content).toMatch(/process\.env\.OTEL_EXPORTER_OTLP_ENDPOINT/);
   });
 });

@@ -94,4 +94,18 @@ describe("AnthropicDecisionEngine", () => {
 
     await expect(engine.decide(STATE, { q1: { type: "noul", instructions: "x" } })).rejects.toThrow(/no tool_use block/);
   });
+
+  it("API-009: never calls fetch when the signal is already aborted", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const engine = new AnthropicDecisionEngine();
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      engine.decide(STATE, { q1: { type: "noul", instructions: "x" } }, controller.signal),
+    ).rejects.toThrow();
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });
