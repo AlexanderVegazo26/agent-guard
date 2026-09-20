@@ -1,6 +1,6 @@
-import { appendFile, mkdir } from "node:fs/promises";
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { computeVariance, defineConfig, loadPolicyConfig, type AssertionResult } from "@agent-guard/core";
+import { computeVariance, defineConfig, loadPolicyConfig, type AssertionResult, type PolicyConfig } from "@agent-guard/core";
 import { JevDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
 import { loadFixtureSuite, type GoldenFixture } from "../fixtures.js";
 import { runFixture } from "../runner.js";
@@ -26,6 +26,110 @@ export interface ValidationRecord {
   inputTokens: number;
   outputTokens: number;
   estimatedCostUsd: number;
+  /** Wall-clock time for the single `runFixture` call this repeat belongs to (PRD3 A10: "every probability, cost and latency"). */
+  latencyMs: number;
+}
+
+/**
+ * PRD3 A10 / F19's definition of "validated", applied per `fixture::assertionId`
+ * group across the recorded repeats:
+ *
+ *   1. verdicts match on >=3 repeats — the modal `status` was reached at least 3 times.
+ *   2. the spread is inside the floor — the confidence range across repeats does not
+ *      exceed the width of the assertion's configured uncertainty band
+ *      (`policy.uncertaintyBand`, or `policy.perAssertion.<id>.uncertaintyBand` where
+ *      one exists). That band width is the only "floor" this codebase already defines
+ *      for confidence spread (`pipeline.ts` uses the same band to decide REVIEW
+ *      eligibility) — `baselineVariance.ts#exceedsVarianceFloor` compares a baseline
+ *      sample set against a *second, proposed* one and doesn't apply to a single
+ *      group of repeats, so it isn't the mechanism used here.
+ *   3. the mock's scripted answer agrees with the live majority — the fixture's
+ *      `expected.json` status (which golden fixtures author *as* the mock-derived
+ *      verdict) equals the live modal status.
+ *
+ * A group with fewer than 3 repeats can never satisfy (1) and is reported
+ * `validated: false` rather than "unknown" — F19's acceptance ("all 21
+ * assertions have >=3 recorded repeats") treats under-sampling as a gap to close,
+ * not a pass.
+ */
+export interface ValidationVerdict {
+  fixture: string;
+  assertionId: string;
+  n: number;
+  modalStatus: AssertionResult["status"] | undefined;
+  modalCount: number;
+  confidenceRange: number | undefined;
+  floor: number | undefined;
+  expectedStatus: AssertionResult["status"] | undefined;
+  verdictsMatch: boolean;
+  spreadInsideFloor: boolean;
+  mockAgrees: boolean;
+  validated: boolean;
+}
+
+function modeOf<T>(values: T[]): { value: T | undefined; count: number } {
+  const counts = new Map<T, number>();
+  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
+  let best: T | undefined;
+  let bestCount = 0;
+  for (const [value, count] of counts) {
+    if (count > bestCount) {
+      best = value;
+      bestCount = count;
+    }
+  }
+  return { value: best, count: bestCount };
+}
+
+function uncertaintyBandFor(assertionId: string, policy: PolicyConfig): [number, number] {
+  const perAssertion = (policy.perAssertion as Record<string, { uncertaintyBand?: [number, number] }>)[assertionId];
+  return perAssertion?.uncertaintyBand ?? policy.uncertaintyBand;
+}
+
+export function computeValidation(
+  records: ValidationRecord[],
+  expected: Map<string, AssertionResult["status"]>,
+  policy: PolicyConfig,
+): ValidationVerdict[] {
+  const byKey = new Map<string, ValidationRecord[]>();
+  for (const record of records) {
+    const key = `${record.fixture}::${record.assertionId}`;
+    const list = byKey.get(key) ?? [];
+    list.push(record);
+    byKey.set(key, list);
+  }
+
+  const verdicts: ValidationVerdict[] = [];
+  for (const [key, list] of [...byKey.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const [fixture, assertionId] = key.split("::") as [string, string];
+    const { value: modalStatus, count: modalCount } = modeOf(list.map((r) => r.status));
+    const verdictsMatch = modalCount >= 3;
+
+    const confidences = list.map((r) => r.confidence).filter((c): c is number => c !== undefined);
+    const stats = confidences.length >= 2 ? computeVariance(confidences) : null;
+    const [lo, hi] = uncertaintyBandFor(assertionId, policy);
+    const floor = hi - lo;
+    const spreadInsideFloor = stats === null ? confidences.length <= 1 : stats.range <= floor;
+
+    const expectedStatus = expected.get(key);
+    const mockAgrees = expectedStatus !== undefined && expectedStatus === modalStatus;
+
+    verdicts.push({
+      fixture,
+      assertionId,
+      n: list.length,
+      modalStatus,
+      modalCount,
+      confidenceRange: stats?.range,
+      floor,
+      expectedStatus,
+      verdictsMatch,
+      spreadInsideFloor,
+      mockAgrees,
+      validated: verdictsMatch && spreadInsideFloor && mockAgrees,
+    });
+  }
+  return verdicts;
 }
 
 /**
@@ -96,7 +200,27 @@ export async function runValidateLiveCommand(options: ValidateLiveCommandOptions
   }
   console.log(`agentguard validate-live: recorded ${records.length} repeat(s) to ${outPath} — estimated spend $${spentUsd.toFixed(4)}\n`);
 
-  printSpread(records);
+  const expected = new Map<string, AssertionResult["status"]>();
+  for (const fixture of fixtures) {
+    for (const [assertionId, exp] of Object.entries(fixture.expected)) {
+      if (assertionId === "coverageNote") continue;
+      expected.set(`${fixture.name}::${assertionId}`, (exp as { status: AssertionResult["status"] }).status);
+    }
+  }
+  const verdicts = computeValidation(records, expected, policy);
+  printSpread(verdicts);
+
+  const byFixture = new Map<string, ValidationVerdict[]>();
+  for (const v of verdicts) {
+    const list = byFixture.get(v.fixture) ?? [];
+    list.push(v);
+    byFixture.set(v.fixture, list);
+  }
+  for (const fixture of fixtures) {
+    const fixtureVerdicts = byFixture.get(fixture.name);
+    if (fixtureVerdicts) await writeValidationToReadme(fixture.dir, fixtureVerdicts);
+  }
+
   return 0;
 }
 
@@ -107,7 +231,9 @@ async function runOneRepeat(
   repeatIndex: number,
 ): Promise<{ results: ValidationRecord[]; costUsd: number }> {
   const timestamp = new Date().toISOString();
+  const startedAt = Date.now();
   const decisions = await runFixture(fixture, engine, policy);
+  const latencyMs = Date.now() - startedAt;
 
   const results: ValidationRecord[] = [];
   let costUsd = 0;
@@ -125,27 +251,69 @@ async function runOneRepeat(
       inputTokens,
       outputTokens,
       estimatedCostUsd: estimateCostUsd(inputTokens, outputTokens),
+      latencyMs,
     });
   }
   return { results, costUsd };
 }
 
-function printSpread(records: ValidationRecord[]): void {
-  const byKey = new Map<string, ValidationRecord[]>();
-  for (const record of records) {
-    const key = `${record.fixture}::${record.assertionId}`;
-    const list = byKey.get(key) ?? [];
-    list.push(record);
-    byKey.set(key, list);
+const README_BLOCK_START = "<!-- agentguard:validate-live:start -->";
+const README_BLOCK_END = "<!-- agentguard:validate-live:end -->";
+
+/**
+ * PRD3 F19: "writes a `validated: true|false` line per assertion into the
+ * fixture's `README.md` coverage block." No such block existed anywhere in
+ * any golden fixture's README before this — there is no prior convention
+ * to match, so this introduces one delimited block per fixture, replaced
+ * wholesale on every run (idempotent: rerunning does not accumulate lines).
+ */
+function renderReadmeBlock(verdicts: ValidationVerdict[]): string {
+  const lines = [README_BLOCK_START, "", "## Live validation (agentguard validate-live)", ""];
+  for (const v of verdicts) {
+    const rangeStr = v.confidenceRange === undefined ? "n/a" : v.confidenceRange.toFixed(3);
+    const assertionLabel = "`" + v.assertionId + "`";
+    lines.push(
+      `- ${assertionLabel}: validated: ${v.validated} (n=${v.n}, modal=${v.modalStatus ?? "n/a"} x${v.modalCount}, range=${rangeStr}, floor=${v.floor?.toFixed(3) ?? "n/a"})`,
+    );
+  }
+  lines.push("", README_BLOCK_END);
+  return lines.join("\n");
+}
+
+async function writeValidationToReadme(fixtureDir: string, verdicts: ValidationVerdict[]): Promise<void> {
+  if (verdicts.length === 0) return;
+  const readmePath = path.join(fixtureDir, "README.md");
+  let existing = "";
+  try {
+    existing = await readFile(readmePath, "utf8");
+  } catch {
+    existing = `# ${path.basename(fixtureDir)}\n`;
   }
 
-  for (const [key, list] of [...byKey.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    const confidences = list.map((r) => r.confidence).filter((c): c is number => c !== undefined);
-    if (confidences.length < 2) {
-      console.log(`  ${key}: ${list.length} repeat(s), no confidence to measure spread against (deterministic or single sample)`);
+  const block = renderReadmeBlock(verdicts);
+  const startIdx = existing.indexOf(README_BLOCK_START);
+  const endIdx = existing.indexOf(README_BLOCK_END);
+  let next: string;
+  if (startIdx !== -1 && endIdx !== -1) {
+    next = existing.slice(0, startIdx) + block + existing.slice(endIdx + README_BLOCK_END.length);
+  } else {
+    next = existing.replace(/\s*$/, "") + "\n\n" + block + "\n";
+  }
+  await writeFile(readmePath, next, "utf8");
+}
+
+function printSpread(verdicts: ValidationVerdict[]): void {
+  for (const v of verdicts) {
+    const key = `${v.fixture}::${v.assertionId}`;
+    if (v.confidenceRange === undefined) {
+      console.log(
+        `  ${key}: ${v.n} repeat(s), no confidence to measure spread against (deterministic or single sample) — validated=${v.validated}`,
+      );
       continue;
     }
-    const stats = computeVariance(confidences)!;
-    console.log(`  ${key}: n=${stats.n} confidence range=${stats.range.toFixed(3)} (min=${stats.min.toFixed(3)} max=${stats.max.toFixed(3)} mean=${stats.mean.toFixed(3)})`);
+    const withinFloor = v.spreadInsideFloor ? "within floor" : "EXCEEDS floor";
+    console.log(
+      `  ${key}: n=${v.n} confidence range=${v.confidenceRange.toFixed(3)} vs floor=${v.floor?.toFixed(3)} (${withinFloor}) — validated=${v.validated}`,
+    );
   }
 }
