@@ -1,5 +1,5 @@
-import type { AssertionId, AssertionResult, EvidenceGraph } from "@agent-guard/core";
-import type { EscalationEngine } from "@agent-guard/decision";
+import type { AssertionId, AssertionResult, EvidenceGraph } from "@alexvegman/core";
+import type { EscalationEngine } from "@alexvegman/decision";
 import { DEFINITIONS } from "./definitions.js";
 import { selectEvidenceForAssertion } from "./selection.js";
 import { buildUnionState } from "./state.js";

@@ -1,8 +1,8 @@
-import { TranscriptAdapter, parseCommand } from "@agent-guard/core";
+import { TranscriptAdapter, parseCommand } from "@alexvegman/core";
 
 /**
  * TRD §17/§30, FR-009 — the Playwright CLI adapter. Playwright is the
- * pre-built **default** on top of `@agent-guard/core`'s generic
+ * pre-built **default** on top of `@alexvegman/core`'s generic
  * `TranscriptAdapter` (added to make "point AgentGuard at any CLI-driven
  * agent" a real, generalized capability rather than a Playwright-only
  * one) — this class adds exactly the Playwright-specific enrichment:

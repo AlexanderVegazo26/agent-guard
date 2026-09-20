@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { FilesystemRunStore } from "@agent-guard/core";
-import { buildReportV1FromRun, formatHtml, formatJson, formatJunit, formatSite, type ReportV1 } from "@agent-guard/reporters";
+import { FilesystemRunStore } from "@alexvegman/core";
+import { buildReportV1FromRun, formatHtml, formatJson, formatJunit, formatSite, type ReportV1 } from "@alexvegman/reporters";
 
 export interface ReportCommandOptions {
   storeRoot?: string;

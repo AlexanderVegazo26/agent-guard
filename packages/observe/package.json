@@ -1,5 +1,5 @@
 {
-  "name": "@agent-guard/observe",
+  "name": "@alexvegman/observe",
   "version": "0.1.0",
   "private": false,
   "license": "MIT",
@@ -16,7 +16,7 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@agent-guard/core": "0.1.0",
+    "@alexvegman/core": "0.1.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "selfsigned": "^5.5.0"
   }

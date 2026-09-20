@@ -2,8 +2,8 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { FilesystemRunStore, type AssertionResult } from "@agent-guard/core";
-import { MockFixProposerEngine } from "@agent-guard/decision";
+import { FilesystemRunStore, type AssertionResult } from "@alexvegman/core";
+import { MockFixProposerEngine } from "@alexvegman/decision";
 import { runAutofixProposeCommand, runAutofixShowCommand } from "./autofix.js";
 
 function result(status: AssertionResult["status"], overrides: Partial<AssertionResult> = {}): AssertionResult {

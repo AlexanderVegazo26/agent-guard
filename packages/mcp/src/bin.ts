@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { loadPolicyConfig } from "@agent-guard/core";
+import { loadPolicyConfig } from "@alexvegman/core";
 import {
   JevDecisionEngine,
   type DecisionEngine,
@@ -8,7 +8,7 @@ import {
   type DecisionState,
   type EngineCapabilities,
   type QuestionSet,
-} from "@agent-guard/decision";
+} from "@alexvegman/decision";
 import { AgentGuardMcpServer } from "./server.js";
 
 /**
@@ -46,7 +46,7 @@ class LazyJevDecisionEngine implements DecisionEngine {
  * `agentguard_get_report`, `agentguard_finish_run` — server.ts) with an
  * MCP client over stdio, exactly the way any other MCP server is
  * registered (a client's own config, an orchestrating agent's tool
- * config). Before this file existed, `@agent-guard/mcp` had no `bin` and
+ * config). Before this file existed, `@alexvegman/mcp` had no `bin` and
  * no transport, so there was no way to actually run it.
  *
  * Loads `agentguard.config.ts` the same way every other entry point does

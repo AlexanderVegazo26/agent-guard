@@ -1,5 +1,5 @@
 import path from "node:path";
-import { readCalibrationRecords, splitCalibrationCurves, type CalibrationCurve } from "@agent-guard/core";
+import { readCalibrationRecords, splitCalibrationCurves, type CalibrationCurve } from "@alexvegman/core";
 
 export interface CalibrateCommandOptions {
   storeRoot?: string;

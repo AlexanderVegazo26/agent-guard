@@ -11,10 +11,10 @@ import {
   loadPolicyConfig,
   runSourceAdvisory,
   type AssertionId,
-} from "@agent-guard/core";
-import { evaluate } from "@agent-guard/assertions";
-import type { DecisionAnswer, DecisionEngine, DecisionResult, DecisionState, EngineCapabilities, QuestionSet } from "@agent-guard/decision";
-import { buildReportV1FromRun, formatConsole, formatHtml } from "@agent-guard/reporters";
+} from "@alexvegman/core";
+import { evaluate } from "@alexvegman/assertions";
+import type { DecisionAnswer, DecisionEngine, DecisionResult, DecisionState, EngineCapabilities, QuestionSet } from "@alexvegman/decision";
+import { buildReportV1FromRun, formatConsole, formatHtml } from "@alexvegman/reporters";
 
 export interface WatchCommandOptions {
   task: string;

@@ -1,5 +1,5 @@
-import type { Evidence, EvidenceGraph, EvidenceLink } from "@agent-guard/core";
-import type { DecisionState } from "@agent-guard/decision";
+import type { Evidence, EvidenceGraph, EvidenceLink } from "@alexvegman/core";
+import type { DecisionState } from "@alexvegman/decision";
 
 /**
  * §6.4 — one state per request, shared by every question in the batch

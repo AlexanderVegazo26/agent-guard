@@ -1,5 +1,5 @@
-import type { AssertionStatus } from "@agent-guard/core";
-import type { ChoicePolicy, ScorePolicy } from "@agent-guard/core";
+import type { AssertionStatus } from "@alexvegman/core";
+import type { ChoicePolicy, ScorePolicy } from "@alexvegman/core";
 
 /**
  * §6.2.1 — turning a primitive's answer into a verdict. Three shapes, three

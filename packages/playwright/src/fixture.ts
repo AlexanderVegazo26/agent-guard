@@ -15,11 +15,11 @@ import {
   type InjectedFault,
   type PolicyConfig,
   type Redactor,
-} from "@agent-guard/core";
-import { evaluate } from "@agent-guard/assertions";
-import type { DecisionEngine } from "@agent-guard/decision";
-import { buildReportV1FromRun, formatConsole } from "@agent-guard/reporters";
-import { HttpFaultProxy, ObservingTransport, type CapturedEvent, type FaultProxy, type GuardPolicy } from "@agent-guard/observe";
+} from "@alexvegman/core";
+import { evaluate } from "@alexvegman/assertions";
+import type { DecisionEngine } from "@alexvegman/decision";
+import { buildReportV1FromRun, formatConsole } from "@alexvegman/reporters";
+import { HttpFaultProxy, ObservingTransport, type CapturedEvent, type FaultProxy, type GuardPolicy } from "@alexvegman/observe";
 import type { ObservableAgent, ObservableAgentFactory } from "./agent.js";
 
 export interface HttpFaultInjection {

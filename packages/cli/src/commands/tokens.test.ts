@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AgentRun, FilesystemRunStore, type AssertionResult } from "@agent-guard/core";
+import { AgentRun, FilesystemRunStore, type AssertionResult } from "@alexvegman/core";
 import { runTokensCommand } from "./tokens.js";
 
 describe("agentguard tokens", () => {

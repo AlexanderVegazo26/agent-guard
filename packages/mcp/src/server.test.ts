@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { MockDecisionEngine } from "@agent-guard/decision";
+import { MockDecisionEngine } from "@alexvegman/decision";
 import { AgentGuardMcpServer } from "./server.js";
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatConsole } from "./console.js";
 import { buildReportV1 } from "./schema.js";
-import type { AssertionResult } from "@agent-guard/core";
+import type { AssertionResult } from "@alexvegman/core";
 
 describe("formatConsole", () => {
   it("renders the run id, a pass icon, and an overall PASS label", () => {

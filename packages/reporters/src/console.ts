@@ -1,4 +1,4 @@
-import type { AssertionResult } from "@agent-guard/core";
+import type { AssertionResult } from "@alexvegman/core";
 import type { ReportV1 } from "./schema.js";
 
 /** PRD §9.1 / PRD3 F17 — the console reporter, rendering from a `ReportV1` rather than a raw decisions map. */

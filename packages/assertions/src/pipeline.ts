@@ -1,11 +1,11 @@
-import { recordEngineSpan, type AssertionId, type AssertionResult, type AssertionStatus, type DegradationRecord, type Evidence, type EvidenceGraph, type PolicyConfig } from "@agent-guard/core";
+import { recordEngineSpan, type AssertionId, type AssertionResult, type AssertionStatus, type DegradationRecord, type Evidence, type EvidenceGraph, type PolicyConfig } from "@alexvegman/core";
 import {
   estimateQuestionsTokens,
   estimateStateTokens,
   type DecisionAnswer,
   type DecisionEngine,
   type QuestionSet,
-} from "@agent-guard/decision";
+} from "@alexvegman/decision";
 import { findFabricatedToolMention } from "./claimChecks.js";
 import { DEFINITIONS, type FanOutDefinition } from "./definitions.js";
 import { runDeterministicPrePass } from "./deterministic.js";

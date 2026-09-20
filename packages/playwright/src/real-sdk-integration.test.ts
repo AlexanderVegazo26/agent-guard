@@ -5,8 +5,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { FilesystemRunStore, defineConfig } from "@agent-guard/core";
-import { MockDecisionEngine } from "@agent-guard/decision";
+import { FilesystemRunStore, defineConfig } from "@alexvegman/core";
+import { MockDecisionEngine } from "@alexvegman/decision";
 import { AgentGuardFixture } from "./fixture.js";
 import type { ObservableAgentFactory } from "./agent.js";
 

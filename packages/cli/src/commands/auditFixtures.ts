@@ -1,4 +1,4 @@
-import { DefaultEvidenceCompiler, auditMustCite } from "@agent-guard/core";
+import { DefaultEvidenceCompiler, auditMustCite } from "@alexvegman/core";
 import { loadFixtureSuite } from "../fixtures.js";
 
 export interface AuditFixturesCommandOptions {

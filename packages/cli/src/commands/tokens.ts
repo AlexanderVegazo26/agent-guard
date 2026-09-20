@@ -1,4 +1,4 @@
-import { FilesystemRunStore, type AssertionResult } from "@agent-guard/core";
+import { FilesystemRunStore, type AssertionResult } from "@alexvegman/core";
 
 export interface TokensCommandOptions {
   /** A specific run id to report on. Omitted: every stored run. */

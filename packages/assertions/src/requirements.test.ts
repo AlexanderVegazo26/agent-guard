@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AgentRun, DefaultEvidenceCompiler } from "@agent-guard/core";
+import { AgentRun, DefaultEvidenceCompiler } from "@alexvegman/core";
 import { checkEvidenceSufficiency, REQUIREMENTS, type AssertionRequirements } from "./requirements.js";
 
 /**

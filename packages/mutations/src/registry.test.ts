@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AssertionResult, FaultSpec } from "@agent-guard/core";
+import type { AssertionResult, FaultSpec } from "@alexvegman/core";
 import { MUTATION_CATALOGUE, resolveMutation, summarizeMutationDimensions } from "./registry.js";
 
 describe("MUTATION_CATALOGUE", () => {

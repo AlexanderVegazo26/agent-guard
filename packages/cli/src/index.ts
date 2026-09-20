@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import type { AssertionId, HumanVerdict } from "@agent-guard/core";
+import type { AssertionId, HumanVerdict } from "@alexvegman/core";
 import { runTestCommand } from "./commands/test.js";
 import { runCalibrateCommand } from "./commands/calibrate.js";
 import { runReplayCommand } from "./commands/replay.js";

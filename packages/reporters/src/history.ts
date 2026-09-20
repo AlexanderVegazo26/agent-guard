@@ -1,4 +1,4 @@
-import type { AssertionStatus, RunStore } from "@agent-guard/core";
+import type { AssertionStatus, RunStore } from "@alexvegman/core";
 import { buildReportV1FromRun } from "./schema.js";
 
 /**

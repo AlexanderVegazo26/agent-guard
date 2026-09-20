@@ -1,6 +1,6 @@
-import { AgentRun, DefaultEvidenceCompiler, defineConfig, toCalibrationRecord } from "@agent-guard/core";
+import { AgentRun, DefaultEvidenceCompiler, defineConfig, toCalibrationRecord } from "@alexvegman/core";
 import { describe, expect, it } from "vitest";
-import { MockDecisionEngine } from "@agent-guard/decision";
+import { MockDecisionEngine } from "@alexvegman/decision";
 import { evaluate } from "./pipeline.js";
 
 /**

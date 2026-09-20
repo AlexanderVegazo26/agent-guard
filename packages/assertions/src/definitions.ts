@@ -1,5 +1,5 @@
-import type { AssertionId, Evidence, EvidenceGraph, EvidenceType } from "@agent-guard/core";
-import type { DecisionQuestion } from "@agent-guard/decision";
+import type { AssertionId, Evidence, EvidenceGraph, EvidenceType } from "@alexvegman/core";
+import type { DecisionQuestion } from "@alexvegman/decision";
 import type { Polarity } from "./verdict.js";
 
 /**

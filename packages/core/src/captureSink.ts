@@ -2,8 +2,8 @@ import type { Redactor } from "./redaction.js";
 
 /**
  * PRD3 F13 — before this existed, `TranscriptAdapter.push` (this package),
- * `AgentGuardFixture.push` (`@agent-guard/playwright`) and
- * `HttpFaultProxy.record` (`@agent-guard/observe`) each redacted a draft and
+ * `AgentGuardFixture.push` (`@alexvegman/playwright`) and
+ * `HttpFaultProxy.record` (`@alexvegman/observe`) each redacted a draft and
  * appended it to their own private array, in their own hand-written order.
  * Functionally identical, but three separate places to get that order wrong
  * — redact-then-append is the one sequence PRD2 G0a depends on (no

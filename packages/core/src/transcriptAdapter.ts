@@ -14,7 +14,7 @@ import { CaptureSink } from "./captureSink.js";
  * AgentGuard at any CLI-driven agent" path, not just Playwright's.
  * Anything tool-specific (Playwright's `Page URL:`/`Page Title:` parsing,
  * `browser_state` events) belongs in a subclass — see
- * `@agent-guard/playwright`'s `PlaywrightCliAdapter`, which extends this
+ * `@alexvegman/playwright`'s `PlaywrightCliAdapter`, which extends this
  * and adds exactly that on top. Playwright is the pre-built default, not
  * the only path.
  */

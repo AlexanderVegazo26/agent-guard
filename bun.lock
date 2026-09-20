@@ -8,11 +8,11 @@
         "@typesafe-ai/sdk": "0.6.x",
       },
       "devDependencies": {
-        "@agent-guard/assertions": "workspace:*",
-        "@agent-guard/core": "workspace:*",
-        "@agent-guard/decision": "workspace:*",
-        "@agent-guard/mutations": "workspace:*",
-        "@agent-guard/reporters": "workspace:*",
+        "@alexvegman/assertions": "workspace:*",
+        "@alexvegman/core": "workspace:*",
+        "@alexvegman/decision": "workspace:*",
+        "@alexvegman/mutations": "workspace:*",
+        "@alexvegman/reporters": "workspace:*",
         "@types/node": "^26.0.0",
         "oxlint": "^1.0.0",
         "typescript": "^7.0.2",
@@ -20,29 +20,29 @@
       },
     },
     "packages/assertions": {
-      "name": "@agent-guard/assertions",
+      "name": "@alexvegman/assertions",
       "version": "0.1.0",
       "dependencies": {
-        "@agent-guard/core": "workspace:*",
-        "@agent-guard/decision": "workspace:*",
+        "@alexvegman/core": "0.1.0",
+        "@alexvegman/decision": "0.1.0",
       },
     },
     "packages/cli": {
-      "name": "@agent-guard/cli",
+      "name": "@alexvegman/cli",
       "version": "0.1.0",
       "bin": {
         "agentguard": "./dist/index.js",
       },
       "dependencies": {
-        "@agent-guard/assertions": "workspace:*",
-        "@agent-guard/core": "workspace:*",
-        "@agent-guard/decision": "workspace:*",
-        "@agent-guard/mutations": "workspace:*",
-        "@agent-guard/reporters": "workspace:*",
+        "@alexvegman/assertions": "0.1.0",
+        "@alexvegman/core": "0.1.0",
+        "@alexvegman/decision": "0.1.0",
+        "@alexvegman/mutations": "0.1.0",
+        "@alexvegman/reporters": "0.1.0",
       },
     },
     "packages/core": {
-      "name": "@agent-guard/core",
+      "name": "@alexvegman/core",
       "version": "0.1.0",
       "dependencies": {
         "@opentelemetry/api": "^1.9.1",
@@ -54,86 +54,86 @@
       },
     },
     "packages/decision": {
-      "name": "@agent-guard/decision",
+      "name": "@alexvegman/decision",
       "version": "0.1.0",
       "dependencies": {
-        "@agent-guard/core": "workspace:*",
+        "@alexvegman/core": "0.1.0",
         "@typesafe-ai/sdk": "0.6.x",
       },
     },
     "packages/mcp": {
-      "name": "@agent-guard/mcp",
+      "name": "@alexvegman/mcp",
       "version": "0.1.0",
       "bin": {
         "agentguard-mcp": "./dist/bin.js",
       },
       "dependencies": {
-        "@agent-guard/assertions": "workspace:*",
-        "@agent-guard/core": "workspace:*",
-        "@agent-guard/decision": "workspace:*",
-        "@agent-guard/observe": "workspace:*",
-        "@agent-guard/reporters": "workspace:*",
+        "@alexvegman/assertions": "0.1.0",
+        "@alexvegman/core": "0.1.0",
+        "@alexvegman/decision": "0.1.0",
+        "@alexvegman/observe": "0.1.0",
+        "@alexvegman/reporters": "0.1.0",
         "@modelcontextprotocol/sdk": "^1.30.0",
         "zod": "^3.24.0",
       },
     },
     "packages/mutations": {
-      "name": "@agent-guard/mutations",
+      "name": "@alexvegman/mutations",
       "version": "0.1.0",
       "dependencies": {
-        "@agent-guard/core": "workspace:*",
+        "@alexvegman/core": "0.1.0",
         "zod": "^3.24.0",
       },
     },
     "packages/observe": {
-      "name": "@agent-guard/observe",
+      "name": "@alexvegman/observe",
       "version": "0.1.0",
       "dependencies": {
-        "@agent-guard/core": "workspace:*",
+        "@alexvegman/core": "0.1.0",
         "@modelcontextprotocol/sdk": "^1.30.0",
         "selfsigned": "^5.5.0",
       },
     },
     "packages/playwright": {
-      "name": "@agent-guard/playwright",
+      "name": "@alexvegman/playwright",
       "version": "0.1.0",
       "dependencies": {
-        "@agent-guard/assertions": "workspace:*",
-        "@agent-guard/core": "workspace:*",
-        "@agent-guard/decision": "workspace:*",
-        "@agent-guard/observe": "workspace:*",
-        "@agent-guard/reporters": "workspace:*",
+        "@alexvegman/assertions": "0.1.0",
+        "@alexvegman/core": "0.1.0",
+        "@alexvegman/decision": "0.1.0",
+        "@alexvegman/observe": "0.1.0",
+        "@alexvegman/reporters": "0.1.0",
         "@modelcontextprotocol/sdk": "^1.30.0",
         "@playwright/test": "1.63.0",
       },
     },
     "packages/reporters": {
-      "name": "@agent-guard/reporters",
+      "name": "@alexvegman/reporters",
       "version": "0.1.0",
       "dependencies": {
-        "@agent-guard/core": "workspace:*",
+        "@alexvegman/core": "0.1.0",
         "zod": "^3.24.0",
       },
     },
   },
   "packages": {
-    "@agent-guard/assertions": ["@agent-guard/assertions@workspace:packages/assertions"],
+    "@alexvegman/assertions": ["@alexvegman/assertions@workspace:packages/assertions"],
 
-    "@agent-guard/cli": ["@agent-guard/cli@workspace:packages/cli"],
+    "@alexvegman/cli": ["@alexvegman/cli@workspace:packages/cli"],
 
-    "@agent-guard/core": ["@agent-guard/core@workspace:packages/core"],
+    "@alexvegman/core": ["@alexvegman/core@workspace:packages/core"],
 
-    "@agent-guard/decision": ["@agent-guard/decision@workspace:packages/decision"],
+    "@alexvegman/decision": ["@alexvegman/decision@workspace:packages/decision"],
 
-    "@agent-guard/mcp": ["@agent-guard/mcp@workspace:packages/mcp"],
+    "@alexvegman/mcp": ["@alexvegman/mcp@workspace:packages/mcp"],
 
-    "@agent-guard/mutations": ["@agent-guard/mutations@workspace:packages/mutations"],
+    "@alexvegman/mutations": ["@alexvegman/mutations@workspace:packages/mutations"],
 
-    "@agent-guard/observe": ["@agent-guard/observe@workspace:packages/observe"],
+    "@alexvegman/observe": ["@alexvegman/observe@workspace:packages/observe"],
 
-    "@agent-guard/playwright": ["@agent-guard/playwright@workspace:packages/playwright"],
+    "@alexvegman/playwright": ["@alexvegman/playwright@workspace:packages/playwright"],
 
-    "@agent-guard/reporters": ["@agent-guard/reporters@workspace:packages/reporters"],
+    "@alexvegman/reporters": ["@alexvegman/reporters@workspace:packages/reporters"],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.28.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ=="],
 

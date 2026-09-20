@@ -1,5 +1,5 @@
 {
-  "name": "@agent-guard/cli",
+  "name": "@alexvegman/cli",
   "version": "0.1.0",
   "private": false,
   "license": "MIT",
@@ -20,10 +20,10 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@agent-guard/core": "0.1.0",
-    "@agent-guard/decision": "0.1.0",
-    "@agent-guard/assertions": "0.1.0",
-    "@agent-guard/reporters": "0.1.0",
-    "@agent-guard/mutations": "0.1.0"
+    "@alexvegman/core": "0.1.0",
+    "@alexvegman/decision": "0.1.0",
+    "@alexvegman/assertions": "0.1.0",
+    "@alexvegman/reporters": "0.1.0",
+    "@alexvegman/mutations": "0.1.0"
   }
 }

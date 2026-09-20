@@ -1,4 +1,4 @@
-import type { AssertionId, AssertionResult, EvidenceGraph } from "@agent-guard/core";
+import type { AssertionId, AssertionResult, EvidenceGraph } from "@alexvegman/core";
 
 /**
  * §6.6 — deterministic pre-pass. Runs before any question reaches the

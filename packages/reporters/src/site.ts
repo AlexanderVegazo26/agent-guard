@@ -1,4 +1,4 @@
-import type { AssertionResult } from "@agent-guard/core";
+import type { AssertionResult } from "@alexvegman/core";
 import type { ReportV1 } from "./schema.js";
 
 /**
@@ -16,7 +16,7 @@ import type { ReportV1 } from "./schema.js";
  * actually carries, not because this renderer under-builds them:
  *  - "Evidence graph" here is assertion → evidence-id edges, the only
  *    shape `AssertionResult.evidence` (a string list) gives us. The
- *    richer `EvidenceLink` graph lives in `@agent-guard/core`'s
+ *    richer `EvidenceLink` graph lives in `@alexvegman/core`'s
  *    `StoredEvidence`, which this package's contract (`ReportV1`) does
  *    not carry — building that view means widening the schema, which is
  *    out of scope for this pass.

@@ -1,4 +1,4 @@
-import { AgentRun, DefaultEvidenceCompiler } from "@agent-guard/core";
+import { AgentRun, DefaultEvidenceCompiler } from "@alexvegman/core";
 import { describe, expect, it } from "vitest";
 import { findFabricatedToolMention } from "./claimChecks.js";
 

@@ -12,11 +12,11 @@ import {
   type AssertionResult,
   type InjectedFault,
   type PolicyConfig,
-} from "@agent-guard/core";
-import { evaluate } from "@agent-guard/assertions";
-import type { DecisionEngine } from "@agent-guard/decision";
-import { buildReportV1FromRun } from "@agent-guard/reporters";
-import { HttpFaultProxy, type FaultProxy } from "@agent-guard/observe";
+} from "@alexvegman/core";
+import { evaluate } from "@alexvegman/assertions";
+import type { DecisionEngine } from "@alexvegman/decision";
+import { buildReportV1FromRun } from "@alexvegman/reporters";
+import { HttpFaultProxy, type FaultProxy } from "@alexvegman/observe";
 
 /**
  * PRD §32 — the AgentGuard MCP server. Exposes exactly the seven tools the

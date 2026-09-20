@@ -9,11 +9,11 @@ import {
   loadPolicyConfig,
   toCalibrationRecord,
   type AssertionResult,
-} from "@agent-guard/core";
-import { buildReportV1, formatConsole } from "@agent-guard/reporters";
-import { AnthropicDecisionEngine, AnthropicEscalationEngine, MockDecisionEngine, JevDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
-import { escalateReviews } from "@agent-guard/assertions";
-import { resolveProfile, summarizeMutationDimensions } from "@agent-guard/mutations";
+} from "@alexvegman/core";
+import { buildReportV1, formatConsole } from "@alexvegman/reporters";
+import { AnthropicDecisionEngine, AnthropicEscalationEngine, MockDecisionEngine, JevDecisionEngine, type DecisionEngine } from "@alexvegman/decision";
+import { escalateReviews } from "@alexvegman/assertions";
+import { resolveProfile, summarizeMutationDimensions } from "@alexvegman/mutations";
 import { loadFixtureSuite } from "../fixtures.js";
 import { runFixture } from "../runner.js";
 

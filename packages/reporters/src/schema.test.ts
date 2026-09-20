@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildReportV1, buildReportV1FromRun, ReportV1 } from "./schema.js";
-import { AgentRun, type AssertionResult } from "@agent-guard/core";
+import { AgentRun, type AssertionResult } from "@alexvegman/core";
 
 const PASS: AssertionResult = { id: "goalCompleted", status: "pass", basis: "jev", evidence: ["e-task"], durationMs: 5 };
 

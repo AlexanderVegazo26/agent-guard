@@ -1,4 +1,4 @@
-import type { AssertionId, Evidence, EvidenceGraph } from "@agent-guard/core";
+import type { AssertionId, Evidence, EvidenceGraph } from "@alexvegman/core";
 
 /**
  * §6.5 rule 4 — declared selection order for each fan-out cap, applied only

@@ -8,13 +8,13 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
-      "@agent-guard/core": path.resolve(__dirname, "packages/core/src/index.ts"),
-      "@agent-guard/reporters": path.resolve(__dirname, "packages/reporters/src/index.ts"),
-      "@agent-guard/decision": path.resolve(__dirname, "packages/decision/src/index.ts"),
-      "@agent-guard/assertions": path.resolve(__dirname, "packages/assertions/src/index.ts"),
-      "@agent-guard/observe": path.resolve(__dirname, "packages/observe/src/index.ts"),
-      "@agent-guard/mcp": path.resolve(__dirname, "packages/mcp/src/index.ts"),
-      "@agent-guard/cli": path.resolve(__dirname, "packages/cli/src/index.ts"),
+      "@alexvegman/core": path.resolve(__dirname, "packages/core/src/index.ts"),
+      "@alexvegman/reporters": path.resolve(__dirname, "packages/reporters/src/index.ts"),
+      "@alexvegman/decision": path.resolve(__dirname, "packages/decision/src/index.ts"),
+      "@alexvegman/assertions": path.resolve(__dirname, "packages/assertions/src/index.ts"),
+      "@alexvegman/observe": path.resolve(__dirname, "packages/observe/src/index.ts"),
+      "@alexvegman/mcp": path.resolve(__dirname, "packages/mcp/src/index.ts"),
+      "@alexvegman/cli": path.resolve(__dirname, "packages/cli/src/index.ts"),
     },
   },
   test: {

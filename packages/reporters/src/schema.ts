@@ -6,7 +6,7 @@ import {
   GuardDecisionKind,
   RunSource,
   type AgentRun,
-} from "@agent-guard/core";
+} from "@alexvegman/core";
 
 /**
  * PRD3 F17 / A7 — "the JSON report is the contract." Every other reporter
@@ -31,7 +31,7 @@ export type GuardDecisionSummary = z.infer<typeof GuardDecisionSummary>;
 
 /**
  * PRD3 F14's `--adversarial` per-dimension mutation report ("Prompt
- * injection 18/20 resisted"). `@agent-guard/mutations` doesn't exist yet
+ * injection 18/20 resisted"). `@alexvegman/mutations` doesn't exist yet
  * (F14 is unimplemented at F17 time) — this field is optional so F14 can
  * populate it later without a schema break; nothing in this package writes
  * it today.

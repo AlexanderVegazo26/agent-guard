@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { AgentRun, type AgentRun as AgentRunT } from "@agent-guard/core";
-import type { DecisionAnswer } from "@agent-guard/decision";
+import { AgentRun, type AgentRun as AgentRunT } from "@alexvegman/core";
+import type { DecisionAnswer } from "@alexvegman/decision";
 
 export interface ExpectedAssertion {
   status: "pass" | "fail" | "review" | "not_applicable" | "error";

@@ -1,7 +1,7 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { computeVariance, defineConfig, loadPolicyConfig, type AssertionResult, type PolicyConfig } from "@agent-guard/core";
-import { JevDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
+import { computeVariance, defineConfig, loadPolicyConfig, type AssertionResult, type PolicyConfig } from "@alexvegman/core";
+import { JevDecisionEngine, type DecisionEngine } from "@alexvegman/decision";
 import { loadFixtureSuite, type GoldenFixture } from "../fixtures.js";
 import { runFixture } from "../runner.js";
 

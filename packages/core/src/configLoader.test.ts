@@ -31,7 +31,7 @@ describe("loadPolicyConfig", () => {
     writeFileSync(
       path.join(dir, "agentguard.config.ts"),
       [
-        'import { defineConfig } from "@agent-guard/core";',
+        'import { defineConfig } from "@alexvegman/core";',
         "export default defineConfig({",
         "  ci: { reviewAsFailure: true },",
         "  uncertaintyBand: [0.1, 0.9],",
@@ -55,7 +55,7 @@ describe("loadPolicyConfig", () => {
     writeFileSync(
       explicitPath,
       [
-        'import { defineConfig } from "@agent-guard/core";',
+        'import { defineConfig } from "@alexvegman/core";',
         "export default defineConfig({ ci: { reviewAsFailure: true } });",
         "",
       ].join("\n"),

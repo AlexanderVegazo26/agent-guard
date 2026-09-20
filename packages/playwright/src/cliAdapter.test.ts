@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DefaultEvidenceCompiler, defineConfig } from "@agent-guard/core";
-import { evaluate } from "@agent-guard/assertions";
-import { MockDecisionEngine } from "@agent-guard/decision";
+import { DefaultEvidenceCompiler, defineConfig } from "@alexvegman/core";
+import { evaluate } from "@alexvegman/assertions";
+import { MockDecisionEngine } from "@alexvegman/decision";
 import { PlaywrightCliAdapter, parseCliCommand } from "./cliAdapter.js";
 
 describe("parseCliCommand", () => {

@@ -1,4 +1,4 @@
-import type { AssertionId, Evidence, EvidenceGraph, EvidenceType } from "@agent-guard/core";
+import type { AssertionId, Evidence, EvidenceGraph, EvidenceType } from "@alexvegman/core";
 
 /**
  * §6.4 — mechanical evidence selection per assertion, by declared window.

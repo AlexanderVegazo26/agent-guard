@@ -1,4 +1,4 @@
-import type { Evidence, EvidenceGraph } from "@agent-guard/core";
+import type { Evidence, EvidenceGraph } from "@alexvegman/core";
 
 /**
  * §6.6 deterministic pre-pass, bullet 1: "No `tool_call` evidence for tool X

@@ -7,10 +7,10 @@ import {
   loadPolicyConfig,
   runSourceAdvisory,
   type AssertionId,
-} from "@agent-guard/core";
-import { buildReportV1FromRun, formatConsole } from "@agent-guard/reporters";
-import { escalateReviews, evaluate } from "@agent-guard/assertions";
-import { AnthropicEscalationEngine, JevDecisionEngine, MockDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
+} from "@alexvegman/core";
+import { buildReportV1FromRun, formatConsole } from "@alexvegman/reporters";
+import { escalateReviews, evaluate } from "@alexvegman/assertions";
+import { AnthropicEscalationEngine, JevDecisionEngine, MockDecisionEngine, type DecisionEngine } from "@alexvegman/decision";
 
 export interface ReplayCommandOptions {
   runId: string;

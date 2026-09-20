@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AgentRun, FilesystemRunStore } from "@agent-guard/core";
+import { AgentRun, FilesystemRunStore } from "@alexvegman/core";
 import { runExportCommand, runVerifyPackCommand } from "./exportPack.js";
 
 describe("agentguard export / verify-pack", () => {

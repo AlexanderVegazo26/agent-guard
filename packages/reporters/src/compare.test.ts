@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compareRuns, formatComparison } from "./compare.js";
 import { buildReportV1 } from "./schema.js";
-import type { AssertionResult } from "@agent-guard/core";
+import type { AssertionResult } from "@alexvegman/core";
 
 function result(status: AssertionResult["status"], overrides: Partial<AssertionResult> = {}): AssertionResult {
   return { id: "x", status, basis: status === "not_applicable" ? "not-applicable" : "jev", evidence: status === "pass" || status === "fail" ? ["e1"] : [], durationMs: 0, ...overrides };

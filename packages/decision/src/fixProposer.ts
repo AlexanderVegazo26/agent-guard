@@ -1,4 +1,4 @@
-import type { AssertionId } from "@agent-guard/core";
+import type { AssertionId } from "@alexvegman/core";
 
 /**
  * docs/AUTOFIX.md §9 — `FixProposerEngine`. Proposes a diff to an agent's

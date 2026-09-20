@@ -2,8 +2,8 @@ import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { DecisionAnswer, DecisionEngine, DecisionResult, DecisionState, QuestionSet } from "@agent-guard/decision";
-import { defineConfig } from "@agent-guard/core";
+import type { DecisionAnswer, DecisionEngine, DecisionResult, DecisionState, QuestionSet } from "@alexvegman/decision";
+import { defineConfig } from "@alexvegman/core";
 import { computeValidation, runValidateLiveCommand, type ValidationRecord } from "./validateLive.js";
 
 const REAL_FIXTURES_ROOT = path.join(process.cwd(), "fixtures", "golden");

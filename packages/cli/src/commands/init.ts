@@ -3,7 +3,7 @@ import { cp, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const DEFAULT_CONFIG = `import { defineConfig } from "@agent-guard/core";
+const DEFAULT_CONFIG = `import { defineConfig } from "@alexvegman/core";
 
 export default defineConfig({
   // See TRD §10.2 for every field this accepts.
@@ -14,7 +14,7 @@ export default defineConfig({
  * Bundled under `packages/cli/examples/` (published via `files` in
  * `package.json`, alongside `dist/`) — resolved relative to this compiled
  * file so it also works when the CLI runs from an installed
- * `node_modules/@agent-guard/cli`, not just inside this monorepo.
+ * `node_modules/@alexvegman/cli`, not just inside this monorepo.
  */
 const BUNDLED_EXAMPLES_DIR = fileURLToPath(new URL("../../examples", import.meta.url));
 

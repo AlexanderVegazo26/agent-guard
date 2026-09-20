@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AgentRun, DefaultEvidenceCompiler, defineConfig, type AssertionId } from "@agent-guard/core";
-import { MockDecisionEngine, type DecisionAnswer } from "@agent-guard/decision";
+import { AgentRun, DefaultEvidenceCompiler, defineConfig, type AssertionId } from "@alexvegman/core";
+import { MockDecisionEngine, type DecisionAnswer } from "@alexvegman/decision";
 import { evaluate } from "./pipeline.js";
 
 /**

@@ -1,6 +1,6 @@
 import { test as base } from "@playwright/test";
-import { FilesystemRunStore, loadPolicyConfig, type PolicyConfig } from "@agent-guard/core";
-import { JevDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
+import { FilesystemRunStore, loadPolicyConfig, type PolicyConfig } from "@alexvegman/core";
+import { JevDecisionEngine, type DecisionEngine } from "@alexvegman/decision";
 import { AgentGuardFixture } from "./fixture.js";
 
 export interface AgentGuardOptions {

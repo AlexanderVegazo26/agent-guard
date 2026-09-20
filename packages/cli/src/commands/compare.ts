@@ -1,5 +1,5 @@
-import { FilesystemRunStore } from "@agent-guard/core";
-import { buildReportV1, compareRuns, formatComparison } from "@agent-guard/reporters";
+import { FilesystemRunStore } from "@alexvegman/core";
+import { buildReportV1, compareRuns, formatComparison } from "@alexvegman/reporters";
 
 export interface CompareCommandOptions {
   beforeId: string;

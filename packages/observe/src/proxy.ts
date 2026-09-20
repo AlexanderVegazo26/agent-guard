@@ -4,7 +4,7 @@ import * as net from "node:net";
 import type { Duplex } from "node:stream";
 import * as tls from "node:tls";
 import selfsigned from "selfsigned";
-import { CaptureSink, DefaultRedactor, type FaultSpec, type Redactor } from "@agent-guard/core";
+import { CaptureSink, DefaultRedactor, type FaultSpec, type Redactor } from "@alexvegman/core";
 
 /**
  * §7 — fault injection and the network proxy. Real implementation: a plain

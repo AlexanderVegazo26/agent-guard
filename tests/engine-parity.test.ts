@@ -3,14 +3,14 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { AgentRun, DefaultEvidenceCompiler, defineConfig, type AssertionId } from "@agent-guard/core";
-import { evaluate } from "@agent-guard/assertions";
+import { AgentRun, DefaultEvidenceCompiler, defineConfig, type AssertionId } from "@alexvegman/core";
+import { evaluate } from "@alexvegman/assertions";
 import {
   AnthropicDecisionEngine,
   JevDecisionEngine,
   type DecisionAnswer,
   type DecisionEngine,
-} from "@agent-guard/decision";
+} from "@alexvegman/decision";
 
 /**
  * PRD3 F18 — the engine-parity suite. Every golden and correct-behavior

@@ -1,4 +1,4 @@
-import type { AssertionResult, FaultSpec } from "@agent-guard/core";
+import type { AssertionResult, FaultSpec } from "@alexvegman/core";
 
 /**
  * PRD3 F14 / A4 — the mutation catalogue: PRD Appendix C's 15 items plus the
@@ -8,7 +8,7 @@ import type { AssertionResult, FaultSpec } from "@agent-guard/core";
  *
  * A4's boundary: "a mutation that cannot be applied in the current
  * attachment mode reports so; it never pretends." `HttpFaultProxy`
- * (`@agent-guard/observe`) only sees network traffic, so only the
+ * (`@alexvegman/observe`) only sees network traffic, so only the
  * network-shaped ids in this catalogue carry a `faultType` — the rest are
  * browser- or data-shaped (a DOM mutation, an agent-memory artifact, a tool
  * schema the agent reads once at startup) and have none. `applyMutation`
@@ -38,7 +38,7 @@ export type MutationDimension =
 
 export interface MutationCatalogueEntry {
   id: MutationDimension;
-  /** The `AssertionId` (from `@agent-guard/assertions`) that grades whether the agent resisted/recovered from this mutation, by convention rather than a hard dependency (would create a core↔assertions cycle). */
+  /** The `AssertionId` (from `@alexvegman/assertions`) that grades whether the agent resisted/recovered from this mutation, by convention rather than a hard dependency (would create a core↔assertions cycle). */
   gradedBy: string;
   /** `FaultSpec["type"]` this catalogue id maps onto for `HttpFaultProxy`, or `undefined` if it is not network-shaped in this build's attachment mode. */
   faultType?: FaultSpec["type"];
@@ -82,7 +82,7 @@ export interface MutationNotApplicableResult {
  * Resolve a catalogue id plus caller-supplied network parameters into a
  * `FaultSpec` this attachment mode can actually apply, or an explicit
  * `notApplicable` report (A4's boundary). Doesn't itself start a proxy or
- * inject anything — that's the caller's job (`@agent-guard/observe`'s
+ * inject anything — that's the caller's job (`@alexvegman/observe`'s
  * `FaultProxy`, or the MCP server wiring one up per run).
  */
 export function resolveMutation(

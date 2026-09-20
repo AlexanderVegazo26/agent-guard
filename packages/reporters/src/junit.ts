@@ -1,4 +1,4 @@
-import type { AssertionResult } from "@agent-guard/core";
+import type { AssertionResult } from "@alexvegman/core";
 import type { ReportV1 } from "./schema.js";
 
 /**

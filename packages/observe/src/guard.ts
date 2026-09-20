@@ -1,4 +1,4 @@
-import type { GuardDecisionKind } from "@agent-guard/core";
+import type { GuardDecisionKind } from "@alexvegman/core";
 
 /**
  * PRD2 F2 — the online guard's deterministic pre-action check. Evaluated

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AgentRun, DefaultEvidenceCompiler } from "@agent-guard/core";
+import { AgentRun, DefaultEvidenceCompiler } from "@alexvegman/core";
 import { priorityOrder } from "./priority.js";
 
 const BASE_RUN = {

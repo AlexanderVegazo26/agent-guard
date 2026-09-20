@@ -1,5 +1,5 @@
-import type { AssertionId, EventProvenance, EvidenceType } from "@agent-guard/core";
-import type { EvidenceGraph } from "@agent-guard/core";
+import type { AssertionId, EventProvenance, EvidenceType } from "@alexvegman/core";
+import type { EvidenceGraph } from "@alexvegman/core";
 
 /**
  * PRD3 F12 — a trust ordering over `EventProvenance`, used only by

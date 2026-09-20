@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatSite } from "./site.js";
 import { buildReportV1 } from "./schema.js";
-import type { AssertionResult } from "@agent-guard/core";
+import type { AssertionResult } from "@alexvegman/core";
 
 /**
  * PRD3 F21 — `formatSite` (the `report --site` fleet dashboard). Each test

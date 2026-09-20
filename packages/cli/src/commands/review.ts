@@ -6,7 +6,7 @@ import {
   type Adjudication,
   type AssertionResult,
   type HumanVerdict,
-} from "@agent-guard/core";
+} from "@alexvegman/core";
 
 export interface ReviewListOptions {
   storeRoot?: string;

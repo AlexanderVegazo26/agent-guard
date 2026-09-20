@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AgentRun, FilesystemRunStore } from "@agent-guard/core";
+import { AgentRun, FilesystemRunStore } from "@alexvegman/core";
 import { runReviewListCommand, runReviewRecordCommand } from "./review.js";
 
 /**

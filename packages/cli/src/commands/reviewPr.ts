@@ -10,7 +10,7 @@ import {
   testsPassed,
   type CodingVerdict,
   type TestRunSummary,
-} from "@agent-guard/assertions";
+} from "@alexvegman/assertions";
 
 const execFileAsync = promisify(execFile);
 

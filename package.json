@@ -24,10 +24,10 @@
     "vitest": "^3.0.0",
     "@types/node": "^26.0.0",
     "oxlint": "^1.0.0",
-    "@agent-guard/core": "workspace:*",
-    "@agent-guard/decision": "workspace:*",
-    "@agent-guard/assertions": "workspace:*",
-    "@agent-guard/reporters": "workspace:*",
-    "@agent-guard/mutations": "workspace:*"
+    "@alexvegman/core": "workspace:*",
+    "@alexvegman/decision": "workspace:*",
+    "@alexvegman/assertions": "workspace:*",
+    "@alexvegman/reporters": "workspace:*",
+    "@alexvegman/mutations": "workspace:*"
   }
 }

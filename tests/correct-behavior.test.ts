@@ -3,9 +3,9 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { AgentRun, DefaultEvidenceCompiler, defineConfig, type AssertionId } from "@agent-guard/core";
-import { evaluate } from "@agent-guard/assertions";
-import { MockDecisionEngine, type DecisionAnswer } from "@agent-guard/decision";
+import { AgentRun, DefaultEvidenceCompiler, defineConfig, type AssertionId } from "@alexvegman/core";
+import { evaluate } from "@alexvegman/assertions";
+import { MockDecisionEngine, type DecisionAnswer } from "@alexvegman/decision";
 
 /**
  * PRD §12 — the correct-behavior set (≥10 runs, zero FAIL verdicts). This is

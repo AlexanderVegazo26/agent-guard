@@ -1,6 +1,6 @@
 import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { MockDecisionEngine } from "@agent-guard/decision";
+import { MockDecisionEngine } from "@alexvegman/decision";
 import { test, expect } from "../dist/index.js";
 import type { ObservableAgentFactory } from "../dist/index.js";
 

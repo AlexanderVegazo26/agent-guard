@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { JevDecisionEngine } from "@agent-guard/decision";
+import { JevDecisionEngine } from "@alexvegman/decision";
 
 export interface DoctorCommandOptions {
   cwd: string;

@@ -1,6 +1,6 @@
-import { DefaultEvidenceCompiler, defineConfig, type AssertionId, type AssertionResult, type PolicyConfig } from "@agent-guard/core";
-import { evaluate } from "@agent-guard/assertions";
-import type { DecisionEngine } from "@agent-guard/decision";
+import { DefaultEvidenceCompiler, defineConfig, type AssertionId, type AssertionResult, type PolicyConfig } from "@alexvegman/core";
+import { evaluate } from "@alexvegman/assertions";
+import type { DecisionEngine } from "@alexvegman/decision";
 import type { GoldenFixture } from "./fixtures.js";
 
 export async function runFixture(

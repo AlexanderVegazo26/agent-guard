@@ -3,9 +3,9 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { AgentRun, DefaultEvidenceCompiler, defineConfig, type AssertionId } from "@agent-guard/core";
-import { evaluate } from "@agent-guard/assertions";
-import { MockDecisionEngine, type DecisionAnswer } from "@agent-guard/decision";
+import { AgentRun, DefaultEvidenceCompiler, defineConfig, type AssertionId } from "@alexvegman/core";
+import { evaluate } from "@alexvegman/assertions";
+import { MockDecisionEngine, type DecisionAnswer } from "@alexvegman/decision";
 
 /**
  * TRD §9.2 — the golden suite, run against `MockDecisionEngine`.

@@ -1,5 +1,5 @@
 {
-  "name": "@agent-guard/mcp",
+  "name": "@alexvegman/mcp",
   "version": "0.1.0",
   "private": false,
   "license": "MIT",
@@ -19,11 +19,11 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@agent-guard/core": "0.1.0",
-    "@agent-guard/decision": "0.1.0",
-    "@agent-guard/assertions": "0.1.0",
-    "@agent-guard/reporters": "0.1.0",
-    "@agent-guard/observe": "0.1.0",
+    "@alexvegman/core": "0.1.0",
+    "@alexvegman/decision": "0.1.0",
+    "@alexvegman/assertions": "0.1.0",
+    "@alexvegman/reporters": "0.1.0",
+    "@alexvegman/observe": "0.1.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^3.24.0"
   }

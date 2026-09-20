@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { collectAssertionHistory, compareToBaseline, passRate, twoProportionZTest } from "./history.js";
-import { AgentRun, FilesystemRunStore, type AssertionResult } from "@agent-guard/core";
+import { AgentRun, FilesystemRunStore, type AssertionResult } from "@alexvegman/core";
 
 describe("collectAssertionHistory / passRate / compareToBaseline — PRD2 F6", () => {
   let root: string;

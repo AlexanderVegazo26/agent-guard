@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { FilesystemRunStore, type AssertionId, type AssertionResult, type RunStore } from "@agent-guard/core";
-import { AnthropicFixProposerEngine, type FixProposerEngine, type RecurringFinding } from "@agent-guard/decision";
+import { FilesystemRunStore, type AssertionId, type AssertionResult, type RunStore } from "@alexvegman/core";
+import { AnthropicFixProposerEngine, type FixProposerEngine, type RecurringFinding } from "@alexvegman/decision";
 
 /**
  * docs/AUTOFIX.md §9/§10 — the part of the autofix design that is NOT

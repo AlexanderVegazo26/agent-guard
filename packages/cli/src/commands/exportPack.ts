@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { FilesystemRunStore, buildEvidencePack, verifyEvidencePack } from "@agent-guard/core";
+import { FilesystemRunStore, buildEvidencePack, verifyEvidencePack } from "@alexvegman/core";
 
 export interface ExportCommandOptions {
   runId: string;
