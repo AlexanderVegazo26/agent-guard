@@ -1,6 +1,6 @@
 {
   "name": "@alexvegman/core",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "private": false,
   "license": "MIT",
   "publishConfig": {
@@ -22,5 +22,6 @@
     "@opentelemetry/sdk-trace-base": "2.11.0",
     "@opentelemetry/semantic-conventions": "1.43.0",
     "zod": "3.25.76"
-  }
+  },
+  "description": "Canonical schema, config loading, redaction, run storage and telemetry for AgentGuard — the foundation every other @alexvegman package builds on."
 }

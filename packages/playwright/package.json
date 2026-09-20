@@ -9,12 +9,13 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@alexvegman/core": "0.1.0",
-    "@alexvegman/decision": "0.1.0",
-    "@alexvegman/assertions": "0.1.0",
-    "@alexvegman/observe": "0.1.0",
-    "@alexvegman/reporters": "0.1.0",
+    "@alexvegman/core": "0.1.3",
+    "@alexvegman/decision": "0.1.3",
+    "@alexvegman/assertions": "0.1.3",
+    "@alexvegman/observe": "0.1.3",
+    "@alexvegman/reporters": "0.1.3",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@playwright/test": "1.63.0"
-  }
+  },
+  "description": "Playwright test fixture that captures AI-agent tool-use traces during e2e tests for AgentGuard to review."
 }

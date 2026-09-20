@@ -14,5 +14,6 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js"
-  }
+  },
+  "description": "Canonical IR types (ToolSpec, ToolSurface, Finding) for Toolsmith, a tool-surface linter for LLM agent tool definitions — see @alexvegman/toolsmith-engine."
 }

@@ -1,6 +1,6 @@
 {
   "name": "@alexvegman/cli",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "private": false,
   "license": "MIT",
   "publishConfig": {
@@ -20,10 +20,11 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@alexvegman/core": "0.1.0",
-    "@alexvegman/decision": "0.1.0",
-    "@alexvegman/assertions": "0.1.0",
-    "@alexvegman/reporters": "0.1.0",
-    "@alexvegman/mutations": "0.1.0"
-  }
+    "@alexvegman/core": "0.1.3",
+    "@alexvegman/decision": "0.1.3",
+    "@alexvegman/assertions": "0.1.3",
+    "@alexvegman/reporters": "0.1.3",
+    "@alexvegman/mutations": "0.1.3"
+  },
+  "description": "The `agentguard` command-line tool — watch, replay, review-pr, autofix, calibrate and more, tying together @alexvegman/core, @alexvegman/decision, @alexvegman/assertions, @alexvegman/reporters and @alexvegman/mutations."
 }

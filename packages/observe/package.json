@@ -1,6 +1,6 @@
 {
   "name": "@alexvegman/observe",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "private": false,
   "license": "MIT",
   "publishConfig": {
@@ -16,8 +16,9 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@alexvegman/core": "0.1.0",
+    "@alexvegman/core": "0.1.3",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "selfsigned": "^5.5.0"
-  }
+  },
+  "description": "Runtime observation for AI agents: an HTTP/HTTPS fault-injection proxy and an MCP tool-call guard, both built on @alexvegman/core."
 }

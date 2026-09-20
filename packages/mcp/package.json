@@ -1,6 +1,6 @@
 {
   "name": "@alexvegman/mcp",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "private": false,
   "license": "MIT",
   "publishConfig": {
@@ -19,12 +19,13 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@alexvegman/core": "0.1.0",
-    "@alexvegman/decision": "0.1.0",
-    "@alexvegman/assertions": "0.1.0",
-    "@alexvegman/reporters": "0.1.0",
-    "@alexvegman/observe": "0.1.0",
+    "@alexvegman/core": "0.1.3",
+    "@alexvegman/decision": "0.1.3",
+    "@alexvegman/assertions": "0.1.3",
+    "@alexvegman/reporters": "0.1.3",
+    "@alexvegman/observe": "0.1.3",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "3.25.76"
-  }
+  },
+  "description": "MCP server (`agentguard-mcp`) exposing AgentGuard's review, guard and reporting capabilities to any MCP-compatible client."
 }
