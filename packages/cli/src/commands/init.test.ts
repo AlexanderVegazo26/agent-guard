@@ -57,4 +57,35 @@ describe("runInitCommand", () => {
     expect(exitCode).toBe(0);
     expect(existsSync(path.join(cwd, "fixtures", "golden"))).toBe(true);
   });
+
+  it("scaffolds a runnable example fixture under agentguard/examples/ (PRD3 F22)", async () => {
+    await runInitCommand(cwd);
+
+    const exampleDir = path.join(cwd, "agentguard", "examples", "todomvc-happy-path");
+    expect(existsSync(path.join(exampleDir, "run.json"))).toBe(true);
+    expect(existsSync(path.join(exampleDir, "expected.json"))).toBe(true);
+    expect(existsSync(path.join(exampleDir, "mock.json"))).toBe(true);
+
+    // Not just present — schema-valid and internally consistent: it must be
+    // exactly the kind of fixture `loadFixtureSuite`/`agentguard test`
+    // expects (a real bug here would be shipping a copy that no longer
+    // parses as an AgentRun, or an expected.json with no matching keys).
+    const run = JSON.parse(await readFile(path.join(exampleDir, "run.json"), "utf8"));
+    const expected = JSON.parse(await readFile(path.join(exampleDir, "expected.json"), "utf8"));
+    expect(Array.isArray(run.events)).toBe(true);
+    expect(run.events.length).toBeGreaterThan(0);
+    expect(Object.keys(expected).length).toBeGreaterThan(0);
+  });
+
+  it("leaves an existing agentguard/examples/ directory alone rather than overwriting it", async () => {
+    const exampleDir = path.join(cwd, "agentguard", "examples", "todomvc-happy-path");
+    await runInitCommand(cwd);
+    await writeFile(path.join(exampleDir, "run.json"), "{\"customized\":true}", "utf8");
+
+    const exitCode = await runInitCommand(cwd);
+
+    expect(exitCode).toBe(0);
+    const run = await readFile(path.join(exampleDir, "run.json"), "utf8");
+    expect(run).toBe("{\"customized\":true}");
+  });
 });

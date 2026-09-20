@@ -1,7 +1,15 @@
 {
   "name": "@agent-guard/cli",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "examples"
+  ],
   "type": "module",
   "bin": {
     "agentguard": "./dist/index.js"
@@ -12,10 +20,10 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@agent-guard/core": "workspace:*",
-    "@agent-guard/decision": "workspace:*",
-    "@agent-guard/assertions": "workspace:*",
-    "@agent-guard/reporters": "workspace:*",
-    "@agent-guard/mutations": "workspace:*"
+    "@agent-guard/core": "0.1.0",
+    "@agent-guard/decision": "0.1.0",
+    "@agent-guard/assertions": "0.1.0",
+    "@agent-guard/reporters": "0.1.0",
+    "@agent-guard/mutations": "0.1.0"
   }
 }

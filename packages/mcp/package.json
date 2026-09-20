@@ -1,7 +1,14 @@
 {
   "name": "@agent-guard/mcp",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,11 +19,11 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@agent-guard/core": "workspace:*",
-    "@agent-guard/decision": "workspace:*",
-    "@agent-guard/assertions": "workspace:*",
-    "@agent-guard/reporters": "workspace:*",
-    "@agent-guard/observe": "workspace:*",
+    "@agent-guard/core": "0.1.0",
+    "@agent-guard/decision": "0.1.0",
+    "@agent-guard/assertions": "0.1.0",
+    "@agent-guard/reporters": "0.1.0",
+    "@agent-guard/observe": "0.1.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^3.24.0"
   }

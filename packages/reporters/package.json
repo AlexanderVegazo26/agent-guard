@@ -1,7 +1,14 @@
 {
   "name": "@agent-guard/reporters",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,7 +16,7 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "@agent-guard/core": "workspace:*",
+    "@agent-guard/core": "0.1.0",
     "zod": "^3.24.0"
   }
 }

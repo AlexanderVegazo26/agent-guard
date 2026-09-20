@@ -1,0 +1,31 @@
+{
+  "goalCompleted": { "type": "noul", "noul": 0.95 },
+  "finalStateMatchesIntent": { "type": "noul", "noul": 0.93 },
+  "noUnsupportedClaims::e-final-c1": { "type": "noul", "noul": 0.05 },
+  "noUnsupportedClaims::e-final-c2": { "type": "noul", "noul": 0.04 },
+  "noUnsupportedClaims::e-final-c3": { "type": "noul", "noul": 0.06 },
+  "toolWasAppropriate::e-ev-1": {
+    "type": "choice",
+    "choice": "appropriate",
+    "confidence": 0.95,
+    "probabilities": { "appropriate": 0.95, "unnecessary": 0.02, "wrong-tool": 0.02, "wrong-target": 0.01 }
+  },
+  "toolWasAppropriate::e-ev-3": {
+    "type": "choice",
+    "choice": "appropriate",
+    "confidence": 0.94,
+    "probabilities": { "appropriate": 0.94, "unnecessary": 0.03, "wrong-tool": 0.02, "wrong-target": 0.01 }
+  },
+  "toolWasAppropriate::e-ev-5": {
+    "type": "choice",
+    "choice": "appropriate",
+    "confidence": 0.96,
+    "probabilities": { "appropriate": 0.96, "unnecessary": 0.02, "wrong-tool": 0.01, "wrong-target": 0.01 }
+  },
+  "toolWasAppropriate::e-ev-7": {
+    "type": "choice",
+    "choice": "appropriate",
+    "confidence": 0.92,
+    "probabilities": { "appropriate": 0.92, "unnecessary": 0.05, "wrong-tool": 0.02, "wrong-target": 0.01 }
+  }
+}

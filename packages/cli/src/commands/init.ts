@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const DEFAULT_CONFIG = `import { defineConfig } from "@agent-guard/core";
 
@@ -8,6 +9,41 @@ export default defineConfig({
   // See TRD §10.2 for every field this accepts.
 });
 `;
+
+/**
+ * Bundled under `packages/cli/examples/` (published via `files` in
+ * `package.json`, alongside `dist/`) — resolved relative to this compiled
+ * file so it also works when the CLI runs from an installed
+ * `node_modules/@agent-guard/cli`, not just inside this monorepo.
+ */
+const BUNDLED_EXAMPLES_DIR = fileURLToPath(new URL("../../examples", import.meta.url));
+
+/**
+ * PRD3 F22 — copy the bundled example fixture(s) into `agentguard/examples/`
+ * in the target project so `agentguard test --fixtures agentguard/examples`
+ * has something runnable immediately after `init`, with no API key or
+ * network access (it runs against the mock decision engine). Never
+ * overwrites a directory the project already created for itself.
+ */
+async function scaffoldExamples(cwd: string): Promise<void> {
+  const destRoot = path.join(cwd, "agentguard", "examples");
+  if (!existsSync(BUNDLED_EXAMPLES_DIR)) {
+    console.log(`  no bundled examples found at ${BUNDLED_EXAMPLES_DIR}, skipping`);
+    return;
+  }
+
+  const entries = await readdir(BUNDLED_EXAMPLES_DIR, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const dest = path.join(destRoot, entry.name);
+    if (existsSync(dest)) {
+      console.log(`  ${dest} already exists, leaving it alone`);
+      continue;
+    }
+    await cp(path.join(BUNDLED_EXAMPLES_DIR, entry.name), dest, { recursive: true });
+    console.log(`  created ${dest}`);
+  }
+}
 
 /** `agentguard init` — PRD §9.3: scaffold config + directories. */
 export async function runInitCommand(cwd: string): Promise<number> {
@@ -22,6 +58,8 @@ export async function runInitCommand(cwd: string): Promise<number> {
     console.log(`  created ${dir}`);
   }
 
+  await scaffoldExamples(cwd);
+
   const configPath = path.join(cwd, "agentguard.config.ts");
   if (existsSync(configPath)) {
     console.log(`  ${configPath} already exists, leaving it alone`);
@@ -31,5 +69,6 @@ export async function runInitCommand(cwd: string): Promise<number> {
   }
 
   console.log("\nSet TYPESAFE_API_KEY in your environment, then run `agentguard doctor`.");
+  console.log("Or, with no setup at all: `agentguard test --fixtures agentguard/examples` runs the bundled example against the mock engine.");
   return 0;
 }
