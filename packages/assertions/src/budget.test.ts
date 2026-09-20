@@ -45,6 +45,16 @@ describe("evaluate — budget and degradation ladder", () => {
     expect(results.finalStateMatchesIntent!.status).toBe("pass");
   });
 
+  it("stamps every result with the usage its decide() call actually reported (token-usage transparency)", async () => {
+    const graph = await new DefaultEvidenceCompiler().compile(RUN);
+    const engine = new MockDecisionEngine(ANSWERS);
+
+    const results = await evaluate(graph, ["goalCompleted", "finalStateMatchesIntent"], engine, defineConfig());
+
+    expect(results.goalCompleted!.usage).toEqual({ inputTokens: 0, outputTokens: 0 });
+    expect(results.finalStateMatchesIntent!.usage).toEqual({ inputTokens: 0, outputTokens: 0 });
+  });
+
   it("splits into one call per assertion when the combined batch doesn't fit but each alone does", async () => {
     const graph = await new DefaultEvidenceCompiler().compile(RUN);
 

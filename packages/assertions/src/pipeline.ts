@@ -132,7 +132,8 @@ export async function evaluate(
     const startedAt = Date.now();
     const decision = await engine.decide(trial.state, trial.questions);
     const durationMs = Date.now() - startedAt;
-    return { ...results, ...interpretAll(pending, graph, plans, decision.answers, policy, durationMs) };
+    const batchResults = interpretAll(pending, graph, plans, decision.answers, policy, durationMs);
+    return { ...results, ...withUsage(batchResults, decision.usage) };
   }
 
   // Split-batch: one `decide()` call per pending assertion. Each gets its
@@ -192,7 +193,8 @@ export async function evaluate(
     const startedAt = Date.now();
     const decision = await engine.decide(own.state, own.questions);
     const durationMs = Date.now() - startedAt;
-    Object.assign(results, interpretAll([id], graph, plans, decision.answers, policy, durationMs, degradation));
+    const callResults = interpretAll([id], graph, plans, decision.answers, policy, durationMs, degradation);
+    Object.assign(results, withUsage(callResults, decision.usage));
   }
 
   return results;
@@ -294,6 +296,22 @@ function interpretAll(
     );
   }
 
+  return out;
+}
+
+/**
+ * Token-usage transparency (README/PRD3 F20 territory): stamps every result
+ * a `decide()` call produced with that call's real `usage`, so a stored run
+ * carries what it actually cost, not just how long it took.
+ */
+function withUsage(
+  results: Record<string, AssertionResult>,
+  usage: { inputTokens: number; outputTokens: number },
+): Record<string, AssertionResult> {
+  const out: Record<string, AssertionResult> = {};
+  for (const [id, result] of Object.entries(results)) {
+    out[id] = { ...result, usage };
+  }
   return out;
 }
 

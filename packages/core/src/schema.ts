@@ -379,6 +379,15 @@ export const AssertionResult = z
     explanation: z.string().optional(),
     degradation: DegradationRecord.optional(),
     durationMs: z.number().nonnegative(),
+    // Token-usage transparency (the "black box" complaint this closes):
+    // the real `usage` a decision engine reported for the `decide()` call
+    // that produced this verdict. Absent for anything decided without an
+    // engine call (`basis: "deterministic"` or `"not-applicable"`).
+    // Attributed at the batch/call level, same convention as `durationMs`
+    // above it — a union-batch call's usage is recorded on every assertion
+    // decided in that one call, not divided among them (there is no sound
+    // way to split one API call's token cost across N questions).
+    usage: z.object({ inputTokens: z.number().nonnegative(), outputTokens: z.number().nonnegative() }).optional(),
   })
   .superRefine((result, ctx) => {
     if ((result.status === "pass" || result.status === "fail") && result.evidence.length === 0) {

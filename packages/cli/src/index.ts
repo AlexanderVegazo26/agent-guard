@@ -14,6 +14,7 @@ import { runAutofixProposeCommand, runAutofixShowCommand } from "./commands/auto
 import { runReviewListCommand, runReviewRecordCommand } from "./commands/review.js";
 import { runExportCommand, runVerifyPackCommand } from "./commands/exportPack.js";
 import { runHistoryCommand } from "./commands/history.js";
+import { runTokensCommand } from "./commands/tokens.js";
 import { runReviewPrCommand } from "./commands/reviewPr.js";
 import { runAuditFixturesCommand } from "./commands/auditFixtures.js";
 
@@ -222,6 +223,18 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "tokens") {
+    const storeRoot = flagValue(rest, "--store");
+    // `--store <dir>` is optional and, unlike every other command here, has
+    // nothing else positional to anchor against — `rest.find` alone would
+    // misread its value as the run id when `--store` comes first (e.g.
+    // `agentguard tokens --store .agentguard`, no run id at all).
+    const positionals = rest.filter((a, i) => a !== storeRoot || rest[i - 1] !== "--store");
+    const runId = positionals.find((a) => !a.startsWith("--"));
+    process.exitCode = await runTokensCommand({ runId, storeRoot });
+    return;
+  }
+
   if (command === "verify-pack") {
     const packDir = rest.find((a) => !a.startsWith("--"));
     if (!packDir) {
@@ -292,6 +305,7 @@ function printHelp(): void {
       "  export <run-id> --out <dir> [--store <dir>]   Export a tamper-evident copy of a run (SHA-256 manifest)",
       "  verify-pack <pack-dir>                         Recompute and check an exported pack's manifest",
       "  history --assertion <id> [--baseline <run-id>] [--store <dir>]   Per-assertion verdict series across stored runs",
+      "  tokens [<run-id>] [--store <dir>]              Real input/output token usage per run, from the decision engine's own usage — no more black box",
       "  review-pr --base <ref> --head <ref> [--repo <dir>] [--description <text>] [--test-results <path>]   Deterministic coding-agent checks against a real git diff",
       "  audit-fixtures [--fixtures <dir>]              Check every fixture's mustCite ids resolve to real evidence",
       "  watch [--task <text>] [--config <path>] --transcript <file> | -- <command> [args...]   Zero-setup, no API key: point at any agent",
