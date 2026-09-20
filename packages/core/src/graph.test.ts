@@ -166,3 +166,54 @@ describe("DefaultEvidenceCompiler — tool_definition evidence (PRD2 F3)", () =>
     });
   });
 });
+
+describe("DefaultEvidenceCompiler — per-event provenance (PRD3 F12)", () => {
+  it("copies an event's provenance straight onto the evidence it produces", async () => {
+    const run = AgentRun.parse({
+      ...BASE,
+      task: "Add a todo.",
+      events: [
+        { id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "tool_call", callId: "c1", tool: "add_todo", arguments: {}, provenance: "wire" },
+        { id: "ev-2", timestamp: "2026-09-20T00:00:00.200Z", seq: 2, type: "network", method: "GET", url: "/api/todos", status: 200, provenance: "self-reported" },
+      ],
+    });
+    const graph = await new DefaultEvidenceCompiler().compile(run);
+    expect(graph.byType("tool_call")[0]!.provenance).toBe("wire");
+    expect(graph.byType("network")[0]!.provenance).toBe("self-reported");
+  });
+
+  it("leaves provenance undefined for an event that carries none (pre-F12 runs)", async () => {
+    const run = AgentRun.parse({
+      ...BASE,
+      task: "Add a todo.",
+      events: [{ id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "tool_call", callId: "c1", tool: "add_todo", arguments: {} }],
+    });
+    const graph = await new DefaultEvidenceCompiler().compile(run);
+    expect(graph.byType("tool_call")[0]!.provenance).toBeUndefined();
+  });
+
+  it("tags the task and the final claim 'harness' by default, and 'self-reported' when the run itself is", async () => {
+    const observedRun = AgentRun.parse({ ...BASE, task: "Add a todo.", finalOutput: "Done.", events: [] });
+    const observedGraph = await new DefaultEvidenceCompiler().compile(observedRun);
+    expect(observedGraph.byType("user_request")[0]!.provenance).toBe("harness");
+    expect(observedGraph.byType("agent_claim")[0]!.provenance).toBe("harness");
+
+    const selfReportedRun = AgentRun.parse({ ...BASE, task: "Add a todo.", finalOutput: "Done.", events: [], source: "self-reported" });
+    const selfReportedGraph = await new DefaultEvidenceCompiler().compile(selfReportedRun);
+    expect(selfReportedGraph.byType("user_request")[0]!.provenance).toBe("self-reported");
+    expect(selfReportedGraph.byType("agent_claim")[0]!.provenance).toBe("self-reported");
+  });
+
+  it("propagates a sub-agent event's provenance onto both the agent_result and its derived claim", async () => {
+    const run = AgentRun.parse({
+      ...BASE,
+      task: "Research and summarize.",
+      events: [
+        { id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "agent_result", childAgentId: "sub-1", success: true, claim: "Done.", provenance: "wire" },
+      ],
+    });
+    const graph = await new DefaultEvidenceCompiler().compile(run);
+    expect(graph.byType("agent_result")[0]!.provenance).toBe("wire");
+    expect(graph.byType("agent_claim")[0]!.provenance).toBe("wire");
+  });
+});

@@ -17,12 +17,36 @@ export const AgentIdentity = z.object({
 });
 export type AgentIdentity = z.infer<typeof AgentIdentity>;
 
+/**
+ * PRD3 F12 — how AgentGuard learned about this event, independent of what
+ * the event says happened. `wire`: observed directly off a transport or
+ * network proxy AgentGuard itself controls (the agent cannot lie about a
+ * response it never controlled). `harness`: authored by AgentGuard's own
+ * test scaffolding (an injected fault, the task text) — synthetic by
+ * design, not a claim about the agent. `self-reported`: authored by the
+ * agent's own harness reporting what it did (`TranscriptAdapter`,
+ * `agentguard watch`, a caller-supplied `agentguard_start_run` event) — the
+ * same party being evaluated, so a claim of this provenance is evidence of
+ * what was *said*, not of what happened. `imported`: read from an external
+ * instrumentation trace (e.g. a future OpenTelemetry importer) — observed
+ * by that instrumentation, not narrated by the agent, but not captured by
+ * this build's own proxy either.
+ *
+ * Optional and additive: every event persisted before this field existed
+ * has no `provenance`, and nothing currently shipped requires one — see
+ * `assertions/requirements.ts`'s `minProvenance` for where a future
+ * assertion could start relying on it.
+ */
+export const EventProvenance = z.enum(["wire", "harness", "self-reported", "imported"]);
+export type EventProvenance = z.infer<typeof EventProvenance>;
+
 const BaseEvent = z.object({
   id: z.string(),
   timestamp: z.string().datetime(),
   // Monotonic per run. Timestamp resolution alone cannot order same-millisecond
   // events, and ordering is semantically load-bearing (TRD §3.1).
   seq: z.number().int().nonnegative(),
+  provenance: EventProvenance.optional(),
 });
 
 // §7 — what AgentGuard did to the world. `url` is a string (a literal URL or a
@@ -241,6 +265,9 @@ export const Evidence = z.object({
   derivedFrom: z.array(z.string()).min(1),
   timestamp: z.string().datetime(),
   seq: z.number().int(),
+  // PRD3 F12 — copied straight from the source event(s) by the evidence
+  // compiler (`graph.ts`); see `EventProvenance` for what each value means.
+  provenance: EventProvenance.optional(),
 });
 export type Evidence = z.infer<typeof Evidence>;
 

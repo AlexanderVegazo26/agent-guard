@@ -165,6 +165,15 @@ export class TranscriptAdapter {
   protected push(draft: TranscriptEventDraft): void {
     this.seq += 1;
     const redacted = this.redactor.redactEvent(draft);
-    this.events.push({ id: `ev-${this.seq}`, timestamp: new Date().toISOString(), seq: this.seq, ...redacted } as AgentEvent);
+    // PRD3 F12 — every event this adapter produces is authored by the
+    // caller reporting a command/output pair, not observed by AgentGuard
+    // on a wire (matches `run.source: "self-reported"` on `stop()`).
+    this.events.push({
+      id: `ev-${this.seq}`,
+      timestamp: new Date().toISOString(),
+      seq: this.seq,
+      provenance: "self-reported",
+      ...redacted,
+    } as AgentEvent);
   }
 }

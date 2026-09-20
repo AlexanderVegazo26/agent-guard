@@ -235,6 +235,11 @@ export class AgentGuardFixture {
   private push(draft: EventDraft): void {
     this.seq += 1;
     const redacted = this.redactor.redactEvent(draft);
-    this.events.push({ id: `ev-${this.seq}`, timestamp: new Date().toISOString(), seq: this.seq, ...redacted } as AgentEvent);
+    // PRD3 F12 — every draft here except "fault" is genuinely observed
+    // (the wrapped MCP transport or the fault proxy), never narrated by
+    // the agent under test. "fault" is AgentGuard's own synthetic
+    // injection — harness-authored, not an observation of the agent.
+    const provenance = draft.type === "fault" ? "harness" : "wire";
+    this.events.push({ id: `ev-${this.seq}`, timestamp: new Date().toISOString(), seq: this.seq, provenance, ...redacted } as AgentEvent);
   }
 }

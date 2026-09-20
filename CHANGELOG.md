@@ -25,4 +25,21 @@ Closes the first gate of `docs/PRD3.md`'s roadmap: making the record the codebas
 
 ### Known gaps carried forward (see `docs/PRD3.md` §5 for the full feature set)
 
-The remaining PRD3 phases (B-F: per-event provenance, a unified capture pipeline, the mutation engine, a second decision engine, live-validation protocol, self-observability, the fleet dashboard, and npm distribution) are specified but not implemented as of this entry. `tighten-selection` and `chunk-aggregate`, the two remaining rungs of the degradation ladder, also remain unimplemented — only `split-batch`, `fanout-cap`, and the terminal capacity `review` exist and are now recorded.
+`tighten-selection` and `chunk-aggregate`, two of the five degradation-ladder strategies, remain unimplemented — only `split-batch`, `fanout-cap`, and the terminal capacity `review` exist and are now recorded.
+
+## [Unreleased] — PRD3 F12, per-event provenance
+
+The first slice of Phase B ("One path in"): every `AgentEvent` can now carry a `provenance` (`wire` / `harness` / `self-reported` / `imported`), recording *how AgentGuard learned about it*, independent of what it says happened.
+
+### Added
+
+- `EventProvenance` in `@agent-guard/core`'s schema, on `BaseEvent` and copied onto `Evidence` by the compiler (`graph.ts`).
+- Every existing capture path now tags its own events: `HttpFaultProxy`/`ObservingTransport`-derived events via the Playwright fixture → `wire`; an injected fault → `harness`; `TranscriptAdapter` (and therefore `agentguard watch`) → `self-reported`; an `agentguard_start_run` caller-supplied event with no provenance of its own → defaulted to `self-reported`; an `agentguard_mutate`-injected fault → `harness`.
+- `EvidenceRequirement.minProvenance` in `@agent-guard/assertions`: a sufficiency requirement can now demand evidence of at least a given provenance, ranked `self-reported < imported < harness < wire`; an item with no provenance at all never satisfies a stated minimum.
+- Tests: `packages/core/src/graph.test.ts` (provenance propagation, including the task/final-claim harness-vs-self-reported distinction and sub-agent claims), `packages/assertions/src/requirements.test.ts` (new file — `minProvenance` and the review-wins-over-not_applicable rule), plus one test each in `transcriptAdapter.test.ts`, `fixture.test.ts`, and `mcp/server.test.ts`.
+
+### Deliberately not done
+
+- `AgentRun.source` is unchanged — still explicitly set by the run's producer, not derived from its events' provenance. Deriving it was part of PRD3's original A1 proposal; kept independent here to avoid changing behavior every existing caller of `source` already depends on.
+- No shipped assertion's `REQUIREMENTS` entry uses `minProvenance` yet. Every fixture in `fixtures/golden`/`fixtures/correct` predates this field, so retrofitting a minimum onto a shipped requirement would turn real passes into REVIEWs purely because old fixtures carry no provenance — not because the evidence actually got weaker. The mechanism is built and tested; adopting it on a specific assertion is a separate, fixture-updating change.
+- No schema-version bump. The field is optional and additive; every run persisted before it existed still loads unchanged.
