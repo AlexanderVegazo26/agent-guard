@@ -1,5 +1,6 @@
 import { AgentRun, type AgentEvent, type AgentIdentity } from "./schema.js";
 import { DefaultRedactor, type Redactor } from "./redaction.js";
+import { CaptureSink } from "./captureSink.js";
 
 /**
  * The generic transcript adapter — PRD §10's "AgentGuard observes an
@@ -60,8 +61,7 @@ export type TranscriptEventDraft =
   | { type: "browser_state"; kind: "snapshot" | "navigation" | "console" | "error"; url?: string; title?: string; snapshot?: unknown };
 
 export class TranscriptAdapter {
-  protected readonly events: AgentEvent[] = [];
-  protected seq = 0;
+  private readonly sink: CaptureSink<TranscriptEventDraft, AgentEvent>;
   private callCounter = 0;
   private startedAt = "";
   private task = "";
@@ -80,8 +80,16 @@ export class TranscriptAdapter {
    */
   constructor(
     private readonly toolPrefix: string = "cli",
-    private readonly redactor: Redactor = new DefaultRedactor(),
-  ) {}
+    redactor: Redactor = new DefaultRedactor(),
+  ) {
+    this.sink = new CaptureSink({
+      redactor,
+      // PRD3 F12 — every event this adapter produces is authored by the
+      // caller reporting a command/output pair, not observed by AgentGuard
+      // on a wire (matches `run.source: "self-reported"` on `stop()`).
+      envelope: (draft, seq) => ({ id: `ev-${seq}`, timestamp: new Date().toISOString(), seq, provenance: "self-reported", ...draft }) as AgentEvent,
+    });
+  }
 
   async start(options: TranscriptAdapterOptions): Promise<void> {
     this.runId = `${this.toolPrefix}-run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -132,7 +140,7 @@ export class TranscriptAdapter {
       id: this.runId,
       task: this.task,
       agent: this.agentIdentity,
-      events: this.events,
+      events: this.sink.all(),
       faults: [],
       startedAt: this.startedAt,
       endedAt: new Date().toISOString(),
@@ -163,17 +171,6 @@ export class TranscriptAdapter {
   }
 
   protected push(draft: TranscriptEventDraft): void {
-    this.seq += 1;
-    const redacted = this.redactor.redactEvent(draft);
-    // PRD3 F12 — every event this adapter produces is authored by the
-    // caller reporting a command/output pair, not observed by AgentGuard
-    // on a wire (matches `run.source: "self-reported"` on `stop()`).
-    this.events.push({
-      id: `ev-${this.seq}`,
-      timestamp: new Date().toISOString(),
-      seq: this.seq,
-      provenance: "self-reported",
-      ...redacted,
-    } as AgentEvent);
+    this.sink.push(draft);
   }
 }

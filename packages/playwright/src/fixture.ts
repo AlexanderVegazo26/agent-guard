@@ -1,5 +1,6 @@
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
+  CaptureSink,
   DefaultEvidenceCompiler,
   DefaultRedactor,
   computeExitCode,
@@ -67,10 +68,9 @@ type EventDraft =
  * (PRD §10.4: an unavailable/erroring engine must never read as a pass).
  */
 export class AgentGuardFixture {
-  private readonly events: AgentEvent[] = [];
+  private readonly sink: CaptureSink<EventDraft, AgentEvent>;
   private readonly faultRecords: InjectedFault[] = [];
   private readonly startedAt = new Date().toISOString();
-  private seq = 0;
   private proxy: FaultProxy | null = null;
   private drainedProxyEventCount = 0;
   private task = "";
@@ -98,8 +98,23 @@ export class AgentGuardFixture {
     // tool results, and the network events drained from the fault proxy —
     // used to reach `this.events` (and from there, disk) with no
     // redaction applied. Defaults to a plain `DefaultRedactor()`.
-    private readonly redactor: Redactor = new DefaultRedactor(),
-  ) {}
+    redactor: Redactor = new DefaultRedactor(),
+  ) {
+    this.sink = new CaptureSink({
+      redactor,
+      // PRD3 F12 — every draft here except "fault" is genuinely observed
+      // (the wrapped MCP transport or the fault proxy), never narrated by
+      // the agent under test. "fault" is AgentGuard's own synthetic
+      // injection — harness-authored, not an observation of the agent.
+      envelope: (draft, seq) => ({
+        id: `ev-${seq}`,
+        timestamp: new Date().toISOString(),
+        seq,
+        provenance: draft.type === "fault" ? "harness" : "wire",
+        ...draft,
+      }) as AgentEvent,
+    });
+  }
 
   /** Where a real integration points a browser's proxy launch option / CA trust once a fault has been injected. */
   proxyInfo(): { port: number; caCert?: Buffer } | null {
@@ -134,7 +149,7 @@ export class AgentGuardFixture {
       id: this.runId,
       task: this.task,
       agent: { name: "observed-agent" },
-      events: this.events,
+      events: this.sink.all(),
       finalOutput: this.finalOutput,
       faults: this.faultRecords,
       startedAt: this.startedAt,
@@ -233,13 +248,6 @@ export class AgentGuardFixture {
   }
 
   private push(draft: EventDraft): void {
-    this.seq += 1;
-    const redacted = this.redactor.redactEvent(draft);
-    // PRD3 F12 — every draft here except "fault" is genuinely observed
-    // (the wrapped MCP transport or the fault proxy), never narrated by
-    // the agent under test. "fault" is AgentGuard's own synthetic
-    // injection — harness-authored, not an observation of the agent.
-    const provenance = draft.type === "fault" ? "harness" : "wire";
-    this.events.push({ id: `ev-${this.seq}`, timestamp: new Date().toISOString(), seq: this.seq, provenance, ...redacted } as AgentEvent);
+    this.sink.push(draft);
   }
 }

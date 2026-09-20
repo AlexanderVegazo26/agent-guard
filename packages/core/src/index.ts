@@ -15,3 +15,4 @@ export * from "./exitCode.js";
 export * from "./consoleReporter.js";
 export * from "./compare.js";
 export * from "./transcriptAdapter.js";
+export * from "./captureSink.js";
