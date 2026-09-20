@@ -34,9 +34,16 @@ async function main(): Promise<void> {
 
   if (command === "test") {
     const fixturesRoot = flagValue(rest, "--fixtures") ?? path.join(process.cwd(), "fixtures", "golden");
+    const engineFlag = flagValue(rest, "--engine");
+    if (engineFlag && engineFlag !== "jev" && engineFlag !== "anthropic") {
+      console.error(`agentguard test: --engine must be "jev" or "anthropic" (mock is always used without --live), got "${engineFlag}"`);
+      process.exitCode = 1;
+      return;
+    }
     process.exitCode = await runTestCommand({
       fixturesRoot,
       live: rest.includes("--live"),
+      engine: engineFlag as "jev" | "anthropic" | undefined,
       storeRoot: flagValue(rest, "--store"),
       escalate: rest.includes("--escalate"),
       configPath: flagValue(rest, "--config"),
@@ -294,7 +301,7 @@ function printHelp(): void {
       "agentguard <command> [options]",
       "",
       "  init                                          Scaffold config + .agentguard/ + fixtures/ directories",
-      "  test [--fixtures <dir>] [--live] [--escalate] [--store <dir>] [--config <path>]   Run the golden suite (mock engine by default)",
+      "  test [--fixtures <dir>] [--live] [--engine jev|anthropic] [--escalate] [--store <dir>] [--config <path>]   Run the golden suite (mock engine by default; --live selects a real one, jev by default)",
       "  replay <run-id> [--live] [--escalate] [--assertions a,b] [--store <dir>] [--config <path>]   Re-evaluate a stored run",
       "  calibrate [--store <dir>]                     Report the §6.9 calibration curve",
       "  doctor [--live]                               Verify the environment (Node/.nvmrc, API key, engine capabilities)",

@@ -11,7 +11,7 @@ import {
   toCalibrationRecord,
   type AssertionResult,
 } from "@agent-guard/core";
-import { AnthropicEscalationEngine, MockDecisionEngine, JevDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
+import { AnthropicDecisionEngine, AnthropicEscalationEngine, MockDecisionEngine, JevDecisionEngine, type DecisionEngine } from "@agent-guard/decision";
 import { escalateReviews } from "@agent-guard/assertions";
 import { loadFixtureSuite } from "../fixtures.js";
 import { runFixture } from "../runner.js";
@@ -19,6 +19,14 @@ import { runFixture } from "../runner.js";
 export interface TestCommandOptions {
   fixturesRoot: string;
   live: boolean;
+  /**
+   * PRD3 F18 — which real engine `--live` talks to. Defaults to `"jev"`,
+   * still the calibration reference (only `"jev"` results feed
+   * `calibration.jsonl` below — a second engine's own accuracy is what the
+   * F18 engine-parity suite measures, not something to fold into Jev's own
+   * curve). Ignored when `live` is false (always the mock).
+   */
+  engine?: "jev" | "anthropic";
   storeRoot?: string;
   /** PRD §10.2 — send uncertainty-band REVIEW results to a frontier LLM for a root-cause explanation. Costs a separate API call per REVIEW; needs ANTHROPIC_API_KEY. */
   escalate?: boolean;
@@ -54,8 +62,14 @@ export async function runTestCommand(options: TestCommandOptions): Promise<numbe
     }
   }
 
+  const engineKind = options.engine ?? "jev";
+
   for (const fixture of fixtures) {
-    const engine: DecisionEngine = options.live ? new JevDecisionEngine() : new MockDecisionEngine(fixture.mock);
+    const engine: DecisionEngine = !options.live
+      ? new MockDecisionEngine(fixture.mock)
+      : engineKind === "anthropic"
+        ? new AnthropicDecisionEngine()
+        : new JevDecisionEngine();
     let results = await runFixture(fixture, engine, policy);
 
     const graph = await new DefaultEvidenceCompiler().compile(fixture.run);
@@ -63,14 +77,16 @@ export async function runTestCommand(options: TestCommandOptions): Promise<numbe
     // Calibration measures Jev's own raw signal, so it's recorded against
     // the pre-escalation results — `toCalibrationRecord` only accepts
     // `basis: "jev"` anyway, which escalation replaces with `"escalated"`.
-    const calibrationRecords = Object.entries(results)
-      .map(([id, result]) => {
-        const expected = fixture.expected[id];
-        if (!expected) return null;
-        return toCalibrationRecord(result, expected.status);
-      })
-      .filter((r): r is NonNullable<typeof r> => r !== null);
-    await appendCalibrationRecords(calibrationPath, calibrationRecords);
+    if (!options.live || engineKind === "jev") {
+      const calibrationRecords = Object.entries(results)
+        .map(([id, result]) => {
+          const expected = fixture.expected[id];
+          if (!expected) return null;
+          return toCalibrationRecord(result, expected.status);
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null);
+      await appendCalibrationRecords(calibrationPath, calibrationRecords);
+    }
 
     if (escalationEngine) {
       results = await escalateReviews(graph, results, escalationEngine);
