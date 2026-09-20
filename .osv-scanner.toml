@@ -1,0 +1,9 @@
+# SUP-003's own Pass criterion allows "the remaining advisory has an
+# unexpired waiver with a reachability analysis showing the vulnerable
+# code path is not reachable" (docs/security-check.md §6.1). This is that
+# waiver, not a blanket suppression: it names one specific advisory, with
+# a reason and a re-check date, per §0.7's anti-gaming rules elsewhere in
+# this repo's review contracts (no silent/blanket ignores).
+[[IgnoredVulns]]
+id = "GHSA-82fw-gwwq-j7x9"
+reason = "Vitest/@vitest/mocker path-traversal advisory affects only vitest's own local dev-mode mock resolution. vitest is a devDependency here, never shipped in any published @alexvegman/* package (confirmed via `npm pack --dry-run` on all 10 publishable packages — no test/dev files present), and this repo's CI never runs vitest against untrusted input. Reachable only by a developer running the test suite against a hostile local mock path, which is not this repo's threat model. Tracked for a real upgrade to vitest 4.x when that major bump can be evaluated on its own, not bundled into this pass. Re-check by 2026-12-20."
