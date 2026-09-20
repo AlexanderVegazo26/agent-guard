@@ -34,6 +34,31 @@ const SENSITIVE_HEADER_NAMES = new Set(["authorization", "cookie", "set-cookie"]
 const TOKEN_LIKE_KEY_PATTERN = /(token|secret|password|passwd|api[_-]?key|auth)/i;
 const DEFAULT_AUTH_ENDPOINT_PATTERNS = [/\/login\b/i, /\/auth\b/i, /\/signin\b/i, /\/session\b/i];
 
+/**
+ * PRD3 F13 — secret *shapes* that give themselves away by pattern, not by
+ * the key name they happen to sit under. Before this, `DefaultRedactor`
+ * caught a credential only if it lived under a sensitive-looking key
+ * (`isSensitiveKey`) or matched a caller-supplied literal/pattern — a key
+ * embedded in a URL query string, a log line, or a field named `data`
+ * passed straight through.
+ *
+ * Each pattern trades some false-positive risk for the fail-closed default
+ * this project holds to (a leaked secret is worse than an over-redacted
+ * evidence item). The card-number pattern deliberately requires
+ * human-typical grouping (`1234-5678-9012-3456`, with `-` or ` `) rather
+ * than a bare 13-19 digit run, which would also match ordinary numeric ids
+ * and millisecond timestamps.
+ */
+const BUILTIN_SECRET_PATTERNS: ReadonlyArray<{ name: string; pattern: RegExp }> = [
+  { name: "api-key", pattern: /\bsk-[A-Za-z0-9_-]{16,}\b/ },
+  { name: "aws-access-key-id", pattern: /\bAKIA[0-9A-Z]{16}\b/ },
+  { name: "github-token", pattern: /\bgh[pousr]_[A-Za-z0-9]{20,}\b/ },
+  { name: "jwt", pattern: /\beyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\b/ },
+  { name: "bearer-token", pattern: /\bBearer\s+[A-Za-z0-9._-]{10,}\b/i },
+  { name: "card-number", pattern: /\b\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{1,4}\b/ },
+  { name: "email-address", pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/ },
+];
+
 function placeholderFor(label: string): string {
   return `<redacted:${label.toLowerCase()}>`;
 }
@@ -95,6 +120,9 @@ export class DefaultRedactor implements Redactor {
     for (const pattern of this.patterns) {
       if (pattern.test(value)) return placeholderFor("secret");
     }
+    for (const { name, pattern } of BUILTIN_SECRET_PATTERNS) {
+      if (pattern.test(value)) return placeholderFor(name);
+    }
     return value;
   }
 
@@ -126,6 +154,9 @@ export class DefaultRedactor implements Redactor {
       if (this.secretValues.has(value)) findings.push({ evidenceId, rule: "configured-secret" });
       for (const pattern of this.patterns) {
         if (pattern.test(value)) findings.push({ evidenceId, rule: "configured-pattern" });
+      }
+      for (const { name, pattern } of BUILTIN_SECRET_PATTERNS) {
+        if (pattern.test(value)) findings.push({ evidenceId, rule: `secret-shape:${name}` });
       }
       return;
     }

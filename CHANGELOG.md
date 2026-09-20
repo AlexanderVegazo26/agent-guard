@@ -43,3 +43,13 @@ The first slice of Phase B ("One path in"): every `AgentEvent` can now carry a `
 - `AgentRun.source` is unchanged — still explicitly set by the run's producer, not derived from its events' provenance. Deriving it was part of PRD3's original A1 proposal; kept independent here to avoid changing behavior every existing caller of `source` already depends on.
 - No shipped assertion's `REQUIREMENTS` entry uses `minProvenance` yet. Every fixture in `fixtures/golden`/`fixtures/correct` predates this field, so retrofitting a minimum onto a shipped requirement would turn real passes into REVIEWs purely because old fixtures carry no provenance — not because the evidence actually got weaker. The mechanism is built and tested; adopting it on a specific assertion is a separate, fixture-updating change.
 - No schema-version bump. The field is optional and additive; every run persisted before it existed still loads unchanged.
+
+## [Unreleased] — PRD3 F13 (partial): built-in redaction pattern library
+
+`DefaultRedactor` (`@agent-guard/core`) caught a secret only if it sat under a sensitive-looking key name, or matched a caller-supplied literal or pattern. It now also recognizes seven common secret *shapes* by pattern alone, independent of the field name they're found under: `sk-`-style API keys, AWS access key ids (`AKIA...`), GitHub tokens (`ghp_`/`gho_`/`ghu_`/`ghs_`/`ghr_`), JWTs, `Bearer` tokens embedded in a larger string, human-formatted card numbers (`1234-5678-9012-3456`), and email addresses. Applied at both the capture-path redactor and the §5.1 `verify()` defence-in-depth audit, so the same shapes are caught whether or not capture-time redaction ran.
+
+The card-number pattern deliberately requires human-typical grouping (digits separated by `-` or ` `) rather than a bare 13-19 digit run, to avoid flagging ordinary numeric ids and millisecond timestamps as secrets — verified with a dedicated non-match test.
+
+20 tests now in `redaction.test.ts` (was 11): one per new pattern, one proving the numeric-id/timestamp non-match, one proving `verify()` catches a shape-only leak.
+
+This is the pattern-library half of F13. The other half — a single `CaptureSink` middleware unifying the three separate `push()` implementations (`TranscriptAdapter`, the Playwright fixture, and the MCP server) that each currently call redaction, validation and storage in their own order — is not done in this entry.
