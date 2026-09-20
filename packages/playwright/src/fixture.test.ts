@@ -112,6 +112,42 @@ describe("AgentGuardFixture", () => {
     await fixture.dispose();
   });
 
+  it("PRD3 F12: tags observed tool events 'wire' and an injected fault 'harness'", async () => {
+    const factory: ObservableAgentFactory = (wrap) => {
+      const [clientTransport, serverTransport] = createLinkedPair();
+      const observed = wrap(clientTransport);
+      wireFakeServer(serverTransport, { add_todo: () => ({ id: "t1" }) });
+
+      return {
+        run: async (_task: string) => {
+          await new Promise<void>((resolve) => {
+            observed.onmessage = () => resolve();
+            void observed.send({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "add_todo", arguments: { text: "Buy milk" } } });
+          });
+          return { finalOutput: "Added Buy milk to the list." };
+        },
+      };
+    };
+
+    const engine = new MockDecisionEngine({});
+    const fixture = new AgentGuardFixture("test-run-provenance", engine, store, defineConfig());
+    await fixture.inject.http({ url: "/api/payment", status: 500 });
+
+    const agent = fixture.observe(factory);
+    await agent.run("Add 'Buy milk' to the todo list.");
+
+    // verify() persists the run; call it with an assertion that resolves
+    // deterministically so this stays independent of the mock engine.
+    await fixture.verify({ assertions: ["evidenceSufficient"] });
+    const persisted = (await store.loadRun("test-run-provenance"))!;
+
+    const toolCall = persisted.events.find((e) => e.type === "tool_call");
+    const fault = persisted.events.find((e) => e.type === "fault");
+    expect(toolCall?.provenance).toBe("wire");
+    expect(fault?.provenance).toBe("harness");
+    await fixture.dispose();
+  });
+
   it("inject.http() routes a real HTTP call through the proxy, records the fault, and verify() throws on a fabricated-completion agent", async () => {
     const upstream = await startUpstream();
 

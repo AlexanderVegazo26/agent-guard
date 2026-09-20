@@ -4,12 +4,18 @@ import type { Polarity } from "./verdict.js";
 
 /**
  * §6.2 — assertions map to Jev primitives, and §6.4 — mechanical selection
- * per assertion. This build's selection is a simplification of the full TRD
- * design: it filters the graph by evidence *type* only ("full-run" window
- * for every assertion). The TRD's tighter windows (±5 events around a tool
- * call, "from injection onward") are declared but not implemented — see
- * repo notes. Selection is still whole-item and verbatim, never summarized,
- * which is the property that actually matters (TRD §6.4).
+ * per assertion. Selection itself (the window each assertion's evidence is
+ * drawn from — "full-run", "tool-call-neighborhood", "from-injection-onward")
+ * is declared in `selection.ts`'s `WINDOWS` map, not here; that file has the
+ * full account of which assertions use a narrower window and why. Selection
+ * is whole-item and verbatim, never summarized, which is the property that
+ * actually matters (TRD §6.4) regardless of which window is in play.
+ *
+ * PRD3 D1: an earlier version of this comment claimed the narrower windows
+ * were "declared but not implemented." That was true when written and
+ * stopped being true once `selection.ts` implemented both; this file was
+ * never updated. Selection window is not tracked on `AssertionDefinition`
+ * for the same reason — see `selection.ts` for why it lives there instead.
  */
 
 export interface SingleQuestionDefinition {

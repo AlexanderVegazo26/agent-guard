@@ -45,6 +45,16 @@ describe("TranscriptAdapter — generic, tool-agnostic", () => {
     expect(run.source).toBe("self-reported");
   });
 
+  it("PRD3 F12: tags every event's own provenance as self-reported too, not only the run's source", async () => {
+    const adapter = new TranscriptAdapter("bash");
+    await adapter.start({ task: "Do a thing." });
+    adapter.captureCommand("ls");
+    adapter.captureOutput("ok");
+    const run = await adapter.stop();
+    expect(run.events.length).toBeGreaterThan(0);
+    expect(run.events.every((e) => e.provenance === "self-reported")).toBe(true);
+  });
+
   it("marks a tool_result as failed via the text heuristic when no explicit success is given", async () => {
     const adapter = new TranscriptAdapter();
     await adapter.start({ task: "Run a command that fails." });

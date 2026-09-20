@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { FilesystemRunStore, type AssertionId, type AssertionResult } from "@agent-guard/core";
+import { FilesystemRunStore, type AssertionId, type AssertionResult, type RunStore } from "@agent-guard/core";
 import { AnthropicFixProposerEngine, type FixProposerEngine, type RecurringFinding } from "@agent-guard/decision";
 
 /**
@@ -135,7 +135,7 @@ export async function runAutofixShowCommand(options: AutofixShowOptions): Promis
   return 0;
 }
 
-async function detectRecurringFindings(store: FilesystemRunStore, runIds: string[]): Promise<RecurringFinding[]> {
+async function detectRecurringFindings(store: RunStore, runIds: string[]): Promise<RecurringFinding[]> {
   const byAssertion = new Map<AssertionId, { occurrences: number; excerpts: string[]; explanation?: string }>();
 
   for (const runId of runIds) {

@@ -130,7 +130,12 @@ export class AgentGuardMcpServer {
           if (!parsed.success) {
             return errorResult(`agentguard_start_run: invalid events — ${parsed.error.message}`);
           }
-          validatedEvents = parsed.data;
+          // PRD3 F12 — an event arriving through this tool was authored by
+          // the orchestrating agent's own tool call, not observed by
+          // AgentGuard on a wire. Only fills in a missing provenance; a
+          // caller that already tagged its own events (e.g. re-submitting
+          // events an OTel importer produced) is not overridden.
+          validatedEvents = parsed.data.map((e) => (e.provenance ? e : { ...e, provenance: "self-reported" as const }));
         }
 
         const id = nextRunId();
@@ -192,6 +197,9 @@ export class AgentGuardMcpServer {
           spec: fault,
           timestamp: new Date().toISOString(),
           seq: state.events.length + 1,
+          // PRD3 F12 — the server injected this itself; not an observation
+          // of the agent, and not something the agent reported either.
+          provenance: "harness",
         });
         return jsonResult({ faultId });
       },

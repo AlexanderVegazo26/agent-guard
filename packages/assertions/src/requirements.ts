@@ -1,5 +1,27 @@
-import type { AssertionId, EvidenceType } from "@agent-guard/core";
+import type { AssertionId, EventProvenance, EvidenceType } from "@agent-guard/core";
 import type { EvidenceGraph } from "@agent-guard/core";
+
+/**
+ * PRD3 F12 — a trust ordering over `EventProvenance`, used only by
+ * `minProvenance` below. `self-reported` is weakest (the party under
+ * evaluation authored it); `wire` is strongest (observed directly, cannot
+ * be lied about). An item with no `provenance` at all (every run persisted
+ * before this field existed, and any capture path that hasn't been updated
+ * to set it) ranks below every named value — fail-safe: unknown provenance
+ * never satisfies a stated minimum.
+ */
+const PROVENANCE_RANK: Record<EventProvenance, number> = {
+  "self-reported": 0,
+  imported: 1,
+  harness: 2,
+  wire: 3,
+};
+
+function meetsMinProvenance(provenance: EventProvenance | undefined, min: EventProvenance | undefined): boolean {
+  if (!min) return true;
+  if (!provenance) return false;
+  return PROVENANCE_RANK[provenance] >= PROVENANCE_RANK[min];
+}
 
 /**
  * §6.3 — `evidenceSufficient` is a deterministic pre-check, never a Jev
@@ -28,6 +50,17 @@ export interface EvidenceRequirement {
    * http-500 fault present on the run must not satisfy it).
    */
   subtype?: string;
+  /**
+   * PRD3 F12 — when set, an evidence item only counts toward `min` if its
+   * `provenance` ranks at or above this value (`PROVENANCE_RANK` above).
+   * Not used by any of the 21 shipped assertions today — every existing
+   * fixture predates the `provenance` field, so retrofitting one onto a
+   * shipped requirement would turn a real PASS into a REVIEW across the
+   * whole golden suite purely because its fixtures carry no provenance,
+   * not because the evidence is actually weaker. See `requirements.test.ts`
+   * for the mechanism proven directly against a synthetic requirement.
+   */
+  minProvenance?: EventProvenance;
   unmet: "review" | "not_applicable";
 }
 
@@ -143,9 +176,14 @@ export interface SufficiencyResult {
 }
 
 function countMatching(graph: EvidenceGraph, requirement: EvidenceRequirement): number {
-  const items = graph.byType(requirement.type);
-  if (requirement.type !== "injected_fault" || !requirement.subtype) return items.length;
-  return items.filter((e) => (e.content as { spec?: { type?: string } }).spec?.type === requirement.subtype).length;
+  let items = graph.byType(requirement.type);
+  if (requirement.type === "injected_fault" && requirement.subtype) {
+    items = items.filter((e) => (e.content as { spec?: { type?: string } }).spec?.type === requirement.subtype);
+  }
+  if (requirement.minProvenance) {
+    items = items.filter((e) => meetsMinProvenance(e.provenance, requirement.minProvenance));
+  }
+  return items.length;
 }
 
 export function checkEvidenceSufficiency(graph: EvidenceGraph, req: AssertionRequirements): SufficiencyResult {

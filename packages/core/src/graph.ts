@@ -4,8 +4,15 @@ import type { AgentEvent, AgentRun, Evidence, EvidenceLink, EvidenceRelation, Ev
  * §5 Evidence compiler and §5.2 query interface.
  *
  * Pipeline: Events → Normalize → Extract → Link → EvidenceGraph.
- * The "Verify-redaction" stage (TRD §5.1) is intentionally not implemented —
- * redaction-at-capture (§8) is out of scope for this build (see repo notes).
+ *
+ * PRD3 D2: this comment used to say the "Verify-redaction" stage (TRD §5.1)
+ * was intentionally not implemented. It was, before PRD2 G0a wired
+ * redaction into every capture path: `FilesystemRunStore.saveEvidence`
+ * (`store.ts`) now runs `Redactor.verify()` as a defence-in-depth audit and
+ * refuses to write on a finding. Redaction itself happens earlier, at
+ * capture (`redaction.ts`, called from `TranscriptAdapter`, the Playwright
+ * fixture and `HttpFaultProxy`) — this compiler receives already-redacted
+ * events and does no redaction work of its own.
  */
 
 export interface EvidenceGraph {
@@ -77,6 +84,16 @@ function normalize(events: AgentEvent[]): AgentEvent[] {
 // ---------------------------------------------------------------------------
 
 function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
+  // PRD3 F12 — the task text and the final-output claim are always
+  // authored by whoever set up the run, never something AgentGuard
+  // observed on a wire, regardless of how the rest of the run's events
+  // were captured. The one distinction that matters here is whether the
+  // *harness itself* is the party under evaluation: a self-reported run
+  // (`TranscriptAdapter`/`agentguard watch`) means both the task framing
+  // and the final claim came from the same self-reporting party being
+  // graded; anything else, they came from whoever configured the test.
+  const harnessProvenance = run.source === "self-reported" ? "self-reported" : "harness";
+
   const items: Evidence[] = [
     {
       id: "e-task",
@@ -86,6 +103,7 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
       derivedFrom: ["run.task"],
       timestamp: run.startedAt,
       seq: -1,
+      provenance: harnessProvenance,
     },
   ];
 
@@ -95,7 +113,7 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
         if (event.role === "user") {
           items.push(makeEvidence(`e-${event.id}`, "user_request", event, { text: event.text }));
         } else if (event.role === "agent") {
-          items.push(...splitClaims(event.text, event.id, event.timestamp, event.seq));
+          items.push(...splitClaims(event.text, event.id, event.timestamp, event.seq, "msg", undefined, event.provenance));
         }
         break;
       case "tool_call":
@@ -167,7 +185,7 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
         // same way any other claim is checked, not read it only off the
         // agent_result wrapper.
         if (event.claim) {
-          items.push(...splitClaims(event.claim, event.id, event.timestamp, event.seq, "msg", event.childAgentId));
+          items.push(...splitClaims(event.claim, event.id, event.timestamp, event.seq, "msg", event.childAgentId, event.provenance));
         }
         break;
       case "guard_decision":
@@ -185,7 +203,9 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
   }
 
   if (run.finalOutput) {
-    items.push(...splitClaims(run.finalOutput, "final", run.endedAt ?? run.startedAt, Number.MAX_SAFE_INTEGER, "final"));
+    items.push(
+      ...splitClaims(run.finalOutput, "final", run.endedAt ?? run.startedAt, Number.MAX_SAFE_INTEGER, "final", undefined, harnessProvenance),
+    );
   }
 
   return items;
@@ -200,6 +220,7 @@ function makeEvidence(id: string, type: EvidenceType, event: AgentEvent, content
     derivedFrom: [event.id],
     timestamp: event.timestamp,
     seq: event.seq,
+    provenance: event.provenance,
   };
 }
 
@@ -220,6 +241,9 @@ function splitClaims(
   // `agent_result.claim`), it's tagged so "the agent said X" stays
   // unambiguous once a run has more than one agent in it.
   agentId?: string,
+  // PRD3 F12 — the provenance of the event this text was extracted from
+  // (or `harnessProvenance`, for the run's own final-output text).
+  provenance?: Evidence["provenance"],
 ): Evidence[] {
   const sentences = text
     .split(/(?<=[.!?])\s+/)
@@ -234,6 +258,7 @@ function splitClaims(
     derivedFrom: [kind === "final" ? "run.finalOutput" : sourceId],
     timestamp,
     seq,
+    provenance,
   }));
 }
 

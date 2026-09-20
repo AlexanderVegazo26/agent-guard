@@ -1,10 +1,15 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Adjudication } from "./schema.js";
 import { AgentRun } from "./schema.js";
 import { FilesystemRunStore } from "./store.js";
+
+function sha256(text: string): string {
+  return createHash("sha256").update(text, "utf8").digest("hex");
+}
 
 const RUN = AgentRun.parse({
   id: "run-store-test",
@@ -174,5 +179,31 @@ describe("FilesystemRunStore", () => {
     await store.saveRun({ ...RUN, id: "run-store-test-2", startedAt: "2026-09-21T00:00:00.000Z" });
 
     expect((await store.listRunIds()).sort()).toEqual(["run-store-test", "run-store-test-2"]);
+  });
+
+  it("PRD3 F16: writes manifest.json with a correct SHA-256 for every file, at write time — not just at export", async () => {
+    const dir = await store.saveRun(RUN);
+    await store.saveEvidence("run-store-test", { task: RUN.task, items: [], links: [] });
+    await store.saveDecisions("run-store-test", {});
+
+    const manifest = await store.loadManifest("run-store-test");
+    expect(manifest).not.toBeNull();
+
+    const runJson = await readFile(path.join(dir, "run.json"), "utf8");
+    const evidenceJson = await readFile(path.join(dir, "evidence.json"), "utf8");
+    const decisionsJson = await readFile(path.join(dir, "decisions.json"), "utf8");
+    expect(manifest!.files["run.json"]).toBe(sha256(runJson));
+    expect(manifest!.files["evidence.json"]).toBe(sha256(evidenceJson));
+    expect(manifest!.files["decisions.json"]).toBe(sha256(decisionsJson));
+  });
+
+  it("PRD3 F16: a byte tampered with after saveRun() no longer matches the manifest recorded at write time", async () => {
+    const dir = await store.saveRun(RUN);
+    const manifestBefore = await store.loadManifest("run-store-test");
+
+    await writeFile(path.join(dir, "run.json"), `${await readFile(path.join(dir, "run.json"), "utf8")} `, "utf8");
+    const tamperedContent = await readFile(path.join(dir, "run.json"), "utf8");
+
+    expect(sha256(tamperedContent)).not.toBe(manifestBefore!.files["run.json"]);
   });
 });

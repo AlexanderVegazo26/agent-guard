@@ -76,6 +76,22 @@ describe("evaluate — budget and degradation ladder", () => {
     expect(engine.calls.map((c) => Object.keys(c.questions))).toEqual([["goalCompleted"], ["finalStateMatchesIntent"]]);
     expect(results.goalCompleted!.status).toBe("pass");
     expect(results.finalStateMatchesIntent!.status).toBe("pass");
+    // PRD3 A3 — every result reached via the split-batch rung records why.
+    expect(results.goalCompleted!.degradation).toEqual({
+      strategy: "split-batch",
+      reason: "the union of all pending assertions' evidence exceeded the engine's token budget; this assertion was evaluated in its own call",
+    });
+    expect(results.finalStateMatchesIntent!.degradation).toEqual(results.goalCompleted!.degradation);
+  });
+
+  it("records no degradation when the union-batch fast path is taken", async () => {
+    const graph = await new DefaultEvidenceCompiler().compile(RUN);
+    const engine = new MockDecisionEngine(ANSWERS);
+
+    const results = await evaluate(graph, ["goalCompleted", "finalStateMatchesIntent"], engine, defineConfig());
+
+    expect(results.goalCompleted!.degradation).toBeUndefined();
+    expect(results.finalStateMatchesIntent!.degradation).toBeUndefined();
   });
 
   it("abstains at capacity, without calling the engine, when even a single assertion cannot fit", async () => {
@@ -91,6 +107,7 @@ describe("evaluate — budget and degradation ladder", () => {
       status: "review",
       reviewVia: "capacity",
       explanation: "evidence exceeds engine capacity",
+      degradation: { strategy: "review" },
     });
   });
 });
@@ -155,6 +172,8 @@ describe("evaluate — fan-out cap engages only on measured overflow (TRD §6.5 
     expect(results.noUnsupportedClaims!.coverageGaps!.length).toBeGreaterThan(0);
     // A capped assertion can never return "pass" (TRD §6.5 rule 4).
     expect(results.noUnsupportedClaims!.status).toBe("review");
+    // PRD3 A3 — a fan-out-cap degradation, distinct from a plain split-batch.
+    expect(results.noUnsupportedClaims!.degradation?.strategy).toBe("fanout-cap");
     // Priority order for unlinked, all-final claims falls back to
     // descending seq, and all 5 tie on seq (same closing message) — so the
     // stable sort keeps the first two claims in extraction order.

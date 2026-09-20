@@ -83,6 +83,29 @@ describe("DefaultRedactor.redactEvent", () => {
     expect(redacted.requestBody).toEqual({ item: "milk" });
   });
 
+  it.each([
+    ["api-key", "the key is sk-abcdefghijklmnopqrstuvwxyz1234 for testing"],
+    ["aws-access-key-id", "found AKIAIOSFODNN7EXAMPLE in the log"],
+    ["github-token", "token: ghp_1234567890abcdefghijklmnopqrstuvwxyz"],
+    ["jwt", "Authorization: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"],
+    ["bearer-token", "curl -H 'Bearer sk_live_abcdef1234567890'"],
+    ["card-number", "charged card 4111-1111-1111-1111 successfully"],
+    ["email-address", "contact jane.doe+test@example.co.uk for support"],
+  ])("redacts a %s found anywhere in a string field, by shape alone (PRD3 F13)", (_label, text) => {
+    const redactor = new DefaultRedactor({ secrets: [] });
+    const event = { type: "tool_call", arguments: { note: text } };
+    const redacted = redactor.redactEvent(event) as typeof event;
+    expect(redacted.arguments.note).not.toBe(text);
+    expect(redacted.arguments.note).toMatch(/^<redacted:/);
+  });
+
+  it("does not redact an ordinary numeric id or an unformatted 16-digit run as a card number (PRD3 F13)", () => {
+    const redactor = new DefaultRedactor({ secrets: [] });
+    const event = { type: "tool_call", arguments: { note: "order id 1758332400000, total 4111111111111111 cents" } };
+    const redacted = redactor.redactEvent(event) as typeof event;
+    expect(redacted.arguments.note).toBe(event.arguments.note);
+  });
+
   it("is fail-closed by contract: it never swallows an internal error", () => {
     const redactor = new DefaultRedactor({ secrets: [] });
     // A circular reference cannot be walked; the function must throw
@@ -116,6 +139,14 @@ describe("DefaultRedactor.verify — §5.1 defence-in-depth audit", () => {
     const audit = redactor.verify(evidence);
     expect(audit.clean).toBe(false);
     expect(audit.findings).toContainEqual({ evidenceId: "e-9", rule: "configured-secret" });
+  });
+
+  it("flags a secret shape found by pattern alone, not just a sensitive key name (PRD3 F13)", () => {
+    const redactor = new DefaultRedactor({ secrets: [] });
+    const evidence = [{ id: "e-5", content: { note: "leaked AKIAIOSFODNN7EXAMPLE here" } }];
+    const audit = redactor.verify(evidence);
+    expect(audit.clean).toBe(false);
+    expect(audit.findings).toContainEqual({ evidenceId: "e-5", rule: "secret-shape:aws-access-key-id" });
   });
 
   it("never mutates the evidence it audits", () => {

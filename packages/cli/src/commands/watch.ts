@@ -5,6 +5,7 @@ import {
   DefaultEvidenceCompiler,
   FilesystemRunStore,
   TranscriptAdapter,
+  applyReviewAsFailurePolicy,
   computeExitCode,
   formatConsole,
   languageAdvisory,
@@ -102,7 +103,7 @@ export async function runWatchCommand(options: WatchCommandOptions): Promise<num
   await writeFile(htmlPath, formatHtml({ [run.id]: results }), "utf8");
   console.log(`  wrote ${htmlPath}`);
 
-  return computeExitCode(results);
+  return applyReviewAsFailurePolicy(computeExitCode(results), policy);
 }
 
 /**

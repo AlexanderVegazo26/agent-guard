@@ -8,9 +8,12 @@ import { evaluate } from "@agent-guard/assertions";
 import { MockDecisionEngine, type DecisionAnswer } from "@agent-guard/decision";
 
 /**
- * TRD §9.2 — the golden suite, run against `MockDecisionEngine`. Only three
- * of the PRD's fifteen MVP-scope fixtures are authored in this build
- * (01, 02, 11) — see the top-level project notes for what's still missing.
+ * TRD §9.2 — the golden suite, run against `MockDecisionEngine`.
+ *
+ * PRD3 D5: this comment used to say only three of the PRD's fifteen
+ * MVP-scope fixtures were authored (01, 02, 11). All 20 fixtures in
+ * `fixtures/golden/` are authored and run by this file today; the comment
+ * was never updated as the rest were added.
  */
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

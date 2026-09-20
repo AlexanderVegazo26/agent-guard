@@ -66,7 +66,7 @@ function formatRunSection(runName: string, results: Record<string, AssertionResu
 
   return `<h2 class="run-heading">${escapeHtml(runName)}</h2>
 <table>
-  <thead><tr><th>Assertion</th><th>Status</th><th>Basis</th><th>Evidence</th><th>Explanation</th></tr></thead>
+  <thead><tr><th>Assertion</th><th>Status</th><th>Basis</th><th>Evidence</th><th>Explanation</th><th>Degradation</th></tr></thead>
   <tbody>
 ${rows}
   </tbody>
@@ -76,12 +76,18 @@ ${rows}
 function formatRow(result: AssertionResult): string {
   const statusLabel = result.status === "not_applicable" ? "n/a" : result.status;
   const evidenceCell = result.evidence.length > 0 ? escapeHtml(result.evidence.join(", ")) : "&mdash;";
+  // PRD3 A3 — surfaces `AssertionResult.degradation`, which the pipeline now
+  // populates on every result reached via the split-batch or fan-out-cap
+  // rungs of the §6.7 ladder (`pipeline.ts`); previously declared in the
+  // schema and never rendered anywhere.
+  const degradationCell = result.degradation ? escapeHtml(`${result.degradation.strategy}: ${result.degradation.reason}`) : "&mdash;";
   return `    <tr>
       <td>${escapeHtml(result.id)}</td>
       <td><span class="status status-${result.status}">${escapeHtml(statusLabel)}</span></td>
       <td>${escapeHtml(result.basis)}</td>
       <td class="evidence">${evidenceCell}</td>
       <td class="explanation">${escapeHtml(result.explanation ?? "")}</td>
+      <td class="explanation">${degradationCell}</td>
     </tr>`;
 }
 

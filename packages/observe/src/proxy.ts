@@ -4,7 +4,7 @@ import * as net from "node:net";
 import type { Duplex } from "node:stream";
 import * as tls from "node:tls";
 import selfsigned from "selfsigned";
-import { DefaultRedactor, type FaultSpec, type Redactor } from "@agent-guard/core";
+import { CaptureSink, DefaultRedactor, type FaultSpec, type Redactor } from "@agent-guard/core";
 
 /**
  * §7 — fault injection and the network proxy. Real implementation: a plain
@@ -14,10 +14,16 @@ import { DefaultRedactor, type FaultSpec, type Redactor } from "@agent-guard/cor
  * provisionally selects; Playwright route interception is the documented
  * fallback if Phase 0 question 8 resolves against it (not built here).
  *
- * What this file does NOT attempt: fidelity parity-testing against an
- * unproxied baseline (TRD §12, "proxy fidelity" — an open risk), and it has
- * not been wired to a real MCP-owned browser's launch options — see the
- * project's top-level notes on what's built vs. declared.
+ * PRD3 D3: this comment used to say fidelity parity-testing against an
+ * unproxied baseline "is not attempted" (TRD §12). It now is —
+ * `proxy-fidelity.test.ts` runs GET, JSON POST and HTTPS-MITM requests both
+ * with and without the proxy and asserts byte-identical bodies; see that
+ * file's own header for what it deliberately does not cover (HTTP/2,
+ * connection reuse, timing overhead). Still not attempted: this proxy has
+ * not been wired to a real MCP-owned browser's launch options — a caller
+ * (e.g. the Playwright fixture) is responsible for pointing a browser's
+ * proxy/CA-trust settings at `proxyInfo()`'s output once a fault is
+ * injected; nothing here does that automatically.
  */
 
 export interface RecordedNetworkEvent {
@@ -79,9 +85,8 @@ export class HttpFaultProxy implements FaultProxy {
   private ca: Pem | null = null;
   private readonly hostCertCache = new Map<string, Pem>();
   private readonly faults: CompiledFault[] = [];
-  private readonly recorded: RecordedNetworkEvent[] = [];
+  private readonly sink: CaptureSink<RecordedNetworkEvent>;
   private readonly upstreamHttpsAgent: https.Agent;
-  private readonly redactor: Redactor;
   // PRD2 review finding: `handleConnect` used to create a fresh
   // `http.Server` per CONNECT tunnel and drive it with
   // `innerServer.emit("connection", tlsSocket)`, but never tracked or
@@ -92,7 +97,7 @@ export class HttpFaultProxy implements FaultProxy {
 
   constructor(options: HttpFaultProxyOptions = {}) {
     this.upstreamHttpsAgent = options.upstreamHttpsAgent ?? https.globalAgent;
-    this.redactor = options.redactor ?? new DefaultRedactor();
+    this.sink = new CaptureSink({ redactor: options.redactor ?? new DefaultRedactor() });
   }
 
   async start(): Promise<{ port: number; caCert?: Buffer }> {
@@ -120,7 +125,7 @@ export class HttpFaultProxy implements FaultProxy {
   }
 
   events(): RecordedNetworkEvent[] {
-    return [...this.recorded];
+    return this.sink.all();
   }
 
   /** Exposed for tests: proves the MITM leak fix actually releases connections, not just that `stop()` doesn't throw. */
@@ -222,10 +227,11 @@ export class HttpFaultProxy implements FaultProxy {
   }
 
   private record(event: RecordedNetworkEvent): void {
-    // PRD2 G0a: redact before this ever enters `this.recorded` — the array
-    // `events()` returns to every consumer (the Playwright fixture, and
-    // anything else that drains this proxy) is the only copy that exists.
-    this.recorded.push(this.redactor.redactEvent(event));
+    // PRD2 G0a: redact before this ever enters the sink's array — the
+    // array `events()` returns to every consumer (the Playwright fixture,
+    // and anything else that drains this proxy) is the only copy that
+    // exists.
+    this.sink.push(event);
   }
 
   private async proxyRequest(

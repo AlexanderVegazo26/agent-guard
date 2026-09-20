@@ -1,6 +1,7 @@
 import {
   DefaultEvidenceCompiler,
   FilesystemRunStore,
+  applyReviewAsFailurePolicy,
   computeExitCode,
   formatConsole,
   languageAdvisory,
@@ -72,7 +73,7 @@ export async function runReplayCommand(options: ReplayCommandOptions): Promise<n
   if (sourceAdvisory) console.log(`\n  ${sourceAdvisory}`);
   await store.saveDecisions(options.runId, results);
 
-  return computeExitCode(results);
+  return applyReviewAsFailurePolicy(computeExitCode(results), policy);
 }
 
 const DEFAULT_ASSERTIONS: Record<AssertionId, true> = {

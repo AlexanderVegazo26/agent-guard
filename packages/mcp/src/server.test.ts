@@ -95,6 +95,24 @@ describe("AgentGuardMcpServer", () => {
     expect(run.faults[0]!.id).toBe("fault-1");
   });
 
+  it("PRD3 F12: tags an injected fault event 'harness' (the server injected it, not the agent) and a caller-supplied event with no provenance 'self-reported'", async () => {
+    const start = await client.callTool({
+      name: "agentguard_start_run",
+      arguments: {
+        task: "Do something.",
+        events: [{ id: "ev-1", type: "tool_call", callId: "c1", tool: "add_todo", arguments: {}, timestamp: new Date().toISOString(), seq: 1 }],
+      },
+    });
+    const { runId } = readJson<{ runId: string }>(start);
+    await client.callTool({ name: "agentguard_mutate", arguments: { runId, fault: { type: "http", url: "/api/payment", status: 500 } } });
+
+    const run = readJson<{ events: { type: string; provenance?: string }[] }>(await client.callTool({ name: "agentguard_get_run", arguments: { runId } }));
+    const toolCallEvent = run.events.find((e) => e.type === "tool_call");
+    const faultEvent = run.events.find((e) => e.type === "fault");
+    expect(toolCallEvent?.provenance).toBe("self-reported");
+    expect(faultEvent?.provenance).toBe("harness");
+  });
+
   it("agentguard_get_report returns null before any agentguard_assert call", async () => {
     const start = await client.callTool({ name: "agentguard_start_run", arguments: { task: "Do something." } });
     const { runId } = readJson<{ runId: string }>(start);
