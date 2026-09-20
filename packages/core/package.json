@@ -23,5 +23,10 @@
     "@opentelemetry/semantic-conventions": "1.43.0",
     "zod": "3.25.76"
   },
-  "description": "Canonical schema, config loading, redaction, run storage and telemetry for AgentGuard — the foundation every other @alexvegman package builds on."
+  "description": "Canonical schema, config loading, redaction, run storage and telemetry for AgentGuard — the foundation every other @alexvegman package builds on.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlexanderVegazo26/agent-guard.git",
+    "directory": "packages/core"
+  }
 }

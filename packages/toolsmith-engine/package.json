@@ -18,5 +18,10 @@
   "dependencies": {
     "@alexvegman/toolsmith-core": "0.1.0"
   },
-  "description": "A pure static rule engine and starter NAM/SCH rule set for Toolsmith, built on @alexvegman/toolsmith-core."
+  "description": "A pure static rule engine and starter NAM/SCH rule set for Toolsmith, built on @alexvegman/toolsmith-core.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlexanderVegazo26/agent-guard.git",
+    "directory": "packages/toolsmith-engine"
+  }
 }

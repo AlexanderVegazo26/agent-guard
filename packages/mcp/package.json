@@ -27,5 +27,10 @@
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "3.25.76"
   },
-  "description": "MCP server (`agentguard-mcp`) exposing AgentGuard's review, guard and reporting capabilities to any MCP-compatible client."
+  "description": "MCP server (`agentguard-mcp`) exposing AgentGuard's review, guard and reporting capabilities to any MCP-compatible client.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlexanderVegazo26/agent-guard.git",
+    "directory": "packages/mcp"
+  }
 }

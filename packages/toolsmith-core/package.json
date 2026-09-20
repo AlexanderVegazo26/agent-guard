@@ -15,5 +15,10 @@
   "exports": {
     ".": "./dist/index.js"
   },
-  "description": "Canonical IR types (ToolSpec, ToolSurface, Finding) for Toolsmith, a tool-surface linter for LLM agent tool definitions — see @alexvegman/toolsmith-engine."
+  "description": "Canonical IR types (ToolSpec, ToolSurface, Finding) for Toolsmith, a tool-surface linter for LLM agent tool definitions — see @alexvegman/toolsmith-engine.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlexanderVegazo26/agent-guard.git",
+    "directory": "packages/toolsmith-core"
+  }
 }

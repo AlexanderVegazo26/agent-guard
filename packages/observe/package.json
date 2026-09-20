@@ -20,5 +20,10 @@
     "@modelcontextprotocol/sdk": "^1.30.0",
     "selfsigned": "^5.5.0"
   },
-  "description": "Runtime observation for AI agents: an HTTP/HTTPS fault-injection proxy and an MCP tool-call guard, both built on @alexvegman/core."
+  "description": "Runtime observation for AI agents: an HTTP/HTTPS fault-injection proxy and an MCP tool-call guard, both built on @alexvegman/core.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlexanderVegazo26/agent-guard.git",
+    "directory": "packages/observe"
+  }
 }
