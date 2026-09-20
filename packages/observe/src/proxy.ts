@@ -120,7 +120,7 @@ export class HttpFaultProxy implements FaultProxy {
     this.faults.push({
       spec: fault,
       matches: (url) => matchesFaultUrl(url, fault.url),
-      timesRemaining: fault.type === "http" ? fault.times ?? Number.POSITIVE_INFINITY : Number.POSITIVE_INFINITY,
+      timesRemaining: "times" in fault ? (fault.times ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY,
     });
   }
 
@@ -260,6 +260,37 @@ export class HttpFaultProxy implements FaultProxy {
         timingMs: Date.now() - startedAt,
         requestBody: safeParseJson(requestBodyRaw),
         responseBody: safeParseJson(responseBodyRaw),
+      });
+      return;
+    }
+
+    // PRD3 F14 — a stalled upstream: hold the connection open for
+    // `delayMs`, then tear it down with no response at all, the same
+    // shape a real hung/unreachable upstream produces (as opposed to
+    // "http"'s fast, well-formed error response).
+    if (fault?.spec.type === "timeout") {
+      fault.timesRemaining -= 1;
+      await new Promise((resolve) => setTimeout(resolve, fault.spec.type === "timeout" ? fault.spec.delayMs : 0));
+      req.socket.destroy();
+      this.record({ method, url: targetUrl, timingMs: Date.now() - startedAt, error: "injected timeout: upstream never responded" });
+      return;
+    }
+
+    // PRD3 F14 — a 200 whose body isn't valid JSON, distinct from "http"'s
+    // structured error body: the agent gets a response, it just can't be
+    // parsed as the API contract promised.
+    if (fault?.spec.type === "malformed-response") {
+      fault.timesRemaining -= 1;
+      const responseBodyRaw = '{"this is not valid JSON';
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(responseBodyRaw);
+      this.record({
+        method,
+        url: targetUrl,
+        status: 200,
+        timingMs: Date.now() - startedAt,
+        requestBody: safeParseJson(requestBodyRaw),
+        responseBody: responseBodyRaw,
       });
       return;
     }

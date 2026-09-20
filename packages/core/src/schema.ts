@@ -65,6 +65,31 @@ export const FaultSpec = z.discriminatedUnion("type", [
     url: z.string(),
     field: z.string(),
     payload: z.string(),
+    // PRD3 F14 — matches the existing "http" fault's own `times`: a prompt
+    // injection that fires forever is a poor adversarial fixture (an agent
+    // that never falls for it after the first attempt still "fails" every
+    // request downstream). Unset stays infinite, the pre-F14 behavior.
+    times: z.number().int().positive().optional(),
+  }),
+  // PRD3 F14 — a stalled upstream: the proxy never responds at all,
+  // distinct from a fast HTTP error. `delayMs` is how long the proxy waits
+  // before giving up and tearing down the connection (a real timeout, not
+  // a fast synthetic error), so an agent under test experiences the same
+  // "is it still coming?" uncertainty a real hang produces.
+  z.object({
+    type: z.literal("timeout"),
+    url: z.string(),
+    delayMs: z.number().int().nonnegative(),
+    times: z.number().int().positive().optional(),
+  }),
+  // PRD3 F14 — a 200 with a body that isn't valid JSON, distinct from an
+  // "http" fault's structured error body: this exercises an agent's
+  // handling of a response it can't even parse, not just one it can parse
+  // and disagrees with.
+  z.object({
+    type: z.literal("malformed-response"),
+    url: z.string(),
+    times: z.number().int().positive().optional(),
   }),
 ]);
 export type FaultSpec = z.infer<typeof FaultSpec>;
