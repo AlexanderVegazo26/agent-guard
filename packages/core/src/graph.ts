@@ -94,6 +94,19 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
   // graded; anything else, they came from whoever configured the test.
   const harnessProvenance = run.source === "self-reported" ? "self-reported" : "harness";
 
+  // PRD3 F12 acceptance: "every persisted run before this field existed
+  // still loads (default `wire` for observed runs, `self-reported` for
+  // runs tagged so)". `makeEvidence` copies an event's own `provenance`
+  // verbatim when present; this is the fallback for an event that has
+  // none — either a pre-F12 run, or a capture path that predates this
+  // field being wired in. Backfilling from `run.source` (rather than
+  // leaving it `undefined`) is what lets `minProvenance` distinguish a
+  // genuinely self-reported event from an old/untagged one without
+  // retroactively judging every untagged golden fixture "unknown".
+  const defaultEventProvenance = run.source === "self-reported" ? "self-reported" : "wire";
+  const mk = (id: string, type: EvidenceType, event: AgentEvent, content: unknown) =>
+    makeEvidence(id, type, event, content, defaultEventProvenance);
+
   const items: Evidence[] = [
     {
       id: "e-task",
@@ -111,14 +124,14 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
     switch (event.type) {
       case "message":
         if (event.role === "user") {
-          items.push(makeEvidence(`e-${event.id}`, "user_request", event, { text: event.text }));
+          items.push(mk(`e-${event.id}`, "user_request", event, { text: event.text }));
         } else if (event.role === "agent") {
-          items.push(...splitClaims(event.text, event.id, event.timestamp, event.seq, "msg", undefined, event.provenance));
+          items.push(...splitClaims(event.text, event.id, event.timestamp, event.seq, "msg", undefined, event.provenance ?? defaultEventProvenance));
         }
         break;
       case "tool_call":
         items.push(
-          makeEvidence(`e-${event.id}`, "tool_call", event, {
+          mk(`e-${event.id}`, "tool_call", event, {
             tool: event.tool,
             arguments: event.arguments,
             callId: event.callId,
@@ -127,7 +140,7 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
         break;
       case "tool_result":
         items.push(
-          makeEvidence(`e-${event.id}`, "tool_result", event, {
+          mk(`e-${event.id}`, "tool_result", event, {
             callId: event.callId,
             success: event.success,
             result: event.result,
@@ -135,19 +148,19 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
         );
         break;
       case "network":
-        items.push(makeEvidence(`e-${event.id}`, "network", event, omitBase(event)));
+        items.push(mk(`e-${event.id}`, "network", event, omitBase(event)));
         break;
       case "browser_state":
-        items.push(makeEvidence(`e-${event.id}`, "browser_state", event, omitBase(event)));
+        items.push(mk(`e-${event.id}`, "browser_state", event, omitBase(event)));
         break;
       case "state_change":
         items.push(
-          makeEvidence(`e-${event.id}`, "state_change", event, { kind: event.kind, data: event.data }),
+          mk(`e-${event.id}`, "state_change", event, { kind: event.kind, data: event.data }),
         );
         break;
       case "fault":
         items.push(
-          makeEvidence(`e-${event.id}`, "injected_fault", event, {
+          mk(`e-${event.id}`, "injected_fault", event, {
             faultId: event.faultId,
             spec: event.spec,
           }),
@@ -155,7 +168,7 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
         break;
       case "tool_definition":
         items.push(
-          makeEvidence(`e-${event.id}`, "tool_definition", event, {
+          mk(`e-${event.id}`, "tool_definition", event, {
             tool: event.tool,
             description: event.description,
             inputSchema: event.inputSchema,
@@ -164,7 +177,7 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
         break;
       case "agent_spawn":
         items.push(
-          makeEvidence(`e-${event.id}`, "agent_spawn", event, {
+          mk(`e-${event.id}`, "agent_spawn", event, {
             parentAgentId: event.parentAgentId,
             childAgentId: event.childAgentId,
             task: event.task,
@@ -173,7 +186,7 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
         break;
       case "agent_result":
         items.push(
-          makeEvidence(`e-${event.id}`, "agent_result", event, {
+          mk(`e-${event.id}`, "agent_result", event, {
             childAgentId: event.childAgentId,
             success: event.success,
             claim: event.claim,
@@ -185,12 +198,12 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
         // same way any other claim is checked, not read it only off the
         // agent_result wrapper.
         if (event.claim) {
-          items.push(...splitClaims(event.claim, event.id, event.timestamp, event.seq, "msg", event.childAgentId, event.provenance));
+          items.push(...splitClaims(event.claim, event.id, event.timestamp, event.seq, "msg", event.childAgentId, event.provenance ?? defaultEventProvenance));
         }
         break;
       case "guard_decision":
         items.push(
-          makeEvidence(`e-${event.id}`, "guard_decision", event, {
+          mk(`e-${event.id}`, "guard_decision", event, {
             tool: event.tool,
             arguments: event.arguments,
             decision: event.decision,
@@ -211,7 +224,7 @@ function extract(run: AgentRun, events: AgentEvent[]): Evidence[] {
   return items;
 }
 
-function makeEvidence(id: string, type: EvidenceType, event: AgentEvent, content: unknown): Evidence {
+function makeEvidence(id: string, type: EvidenceType, event: AgentEvent, content: unknown, defaultProvenance?: Evidence["provenance"]): Evidence {
   return {
     id,
     type,
@@ -220,7 +233,7 @@ function makeEvidence(id: string, type: EvidenceType, event: AgentEvent, content
     derivedFrom: [event.id],
     timestamp: event.timestamp,
     seq: event.seq,
-    provenance: event.provenance,
+    provenance: event.provenance ?? defaultProvenance,
   };
 }
 

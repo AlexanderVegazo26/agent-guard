@@ -4,6 +4,7 @@ import {
   DefaultEvidenceCompiler,
   DefaultRedactor,
   computeExitCode,
+  deriveRunSource,
   languageAdvisory,
   type AgentEvent,
   type AgentRun,
@@ -145,16 +146,23 @@ export class AgentGuardFixture {
   async verify(options: VerifyOptions): Promise<void> {
     this.drainProxyEvents();
 
+    const events = this.sink.all();
     const run: AgentRun = {
       id: this.runId,
       task: this.task,
       agent: { name: "observed-agent" },
-      events: this.sink.all(),
+      events,
       finalOutput: this.finalOutput,
       faults: this.faultRecords,
       startedAt: this.startedAt,
       endedAt: new Date().toISOString(),
       schemaVersion: 1,
+      // PRD3 F12 — every event this fixture produces is tagged "wire" or
+      // "harness" (never "self-reported"), so this always derives to
+      // "observed"; explicit rather than relying on the schema default so
+      // a future capture path added here (e.g. a self-reporting sub-agent)
+      // is reflected without anyone having to remember this call site.
+      source: deriveRunSource(events),
     };
 
     const graph = await new DefaultEvidenceCompiler().compile(run);

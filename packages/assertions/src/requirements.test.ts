@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AgentRun, DefaultEvidenceCompiler } from "@agent-guard/core";
-import { checkEvidenceSufficiency, type AssertionRequirements } from "./requirements.js";
+import { checkEvidenceSufficiency, REQUIREMENTS, type AssertionRequirements } from "./requirements.js";
 
 /**
  * §6.3's sufficiency table had no dedicated unit test before PRD3 Phase A/B
@@ -80,18 +80,71 @@ describe("checkEvidenceSufficiency", () => {
     expect(checkEvidenceSufficiency(graph, req)).toEqual({ sufficient: true });
   });
 
-  it("minProvenance (PRD3 F12): an item with no provenance at all never satisfies a stated minimum", async () => {
-    const run = AgentRun.parse({
-      ...BASE,
+  // Every event `DefaultEvidenceCompiler` extracts is backfilled from
+  // `run.source` when it carries no provenance of its own (PRD3 F12
+  // acceptance — see `graph.test.ts`), so an item with genuinely
+  // undefined provenance can no longer come out of the compiler. It can
+  // still reach `checkEvidenceSufficiency` from anywhere that builds an
+  // `EvidenceGraph` without going through the compiler (a hand-built
+  // graph in a test, or a future non-compiler evidence source) — this
+  // proves the fail-safe in `meetsMinProvenance` directly against that
+  // interface, independent of the compiler's own backfill.
+  it("minProvenance (PRD3 F12): an item with no provenance at all never satisfies a stated minimum", () => {
+    const item = {
+      id: "e-1",
+      type: "network" as const,
+      source: "ev-1",
+      content: { status: 200 },
+      derivedFrom: ["ev-1"],
+      timestamp: "2026-09-20T00:00:00.100Z",
+      seq: 1,
+    };
+    const graph = {
       task: "Check the payment.",
-      events: [{ id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "network", method: "POST", url: "/api/payment", status: 200 }],
-    });
-    const graph = await new DefaultEvidenceCompiler().compile(run);
+      items: [item],
+      links: [],
+      byType: (type: string) => graph.items.filter((e) => e.type === type),
+      related: () => [],
+      window: () => graph.items,
+      linksAmong: () => [],
+    };
     const req: AssertionRequirements = {
       requires: [{ type: "network", min: 1, minProvenance: "harness", unmet: "review" }],
       reason: "test",
     };
 
-    expect(checkEvidenceSufficiency(graph, req)).toMatchObject({ sufficient: false });
+    expect(checkEvidenceSufficiency(graph as unknown as Parameters<typeof checkEvidenceSufficiency>[0], req)).toMatchObject({ sufficient: false });
+  });
+
+  // PRD3 F12's own acceptance text, against the real, shipped
+  // `noFabricatedCompletion` requirement (not a synthetic one): "a
+  // self-reported network event with status 200 does not satisfy
+  // noFabricatedCompletion's requirement; the same event captured by the
+  // proxy does."
+  it("noFabricatedCompletion (PRD3 F12 acceptance): a self-reported network event does not satisfy the requirement", async () => {
+    const run = AgentRun.parse({
+      ...BASE,
+      task: "Purchase the item.",
+      finalOutput: "Payment completed successfully.",
+      source: "self-reported",
+      events: [{ id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "network", method: "POST", url: "/api/payment", status: 200, provenance: "self-reported" }],
+    });
+    const graph = await new DefaultEvidenceCompiler().compile(run);
+
+    const result = checkEvidenceSufficiency(graph, REQUIREMENTS.noFabricatedCompletion);
+    expect(result).toMatchObject({ sufficient: false, outcome: "review" });
+  });
+
+  it("noFabricatedCompletion (PRD3 F12 acceptance): the same event captured by the proxy (wire) does satisfy the requirement", async () => {
+    const run = AgentRun.parse({
+      ...BASE,
+      task: "Purchase the item.",
+      finalOutput: "Payment completed successfully.",
+      events: [{ id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "network", method: "POST", url: "/api/payment", status: 200, provenance: "wire" }],
+    });
+    const graph = await new DefaultEvidenceCompiler().compile(run);
+
+    const result = checkEvidenceSufficiency(graph, REQUIREMENTS.noFabricatedCompletion);
+    expect(result).toEqual({ sufficient: true });
   });
 });

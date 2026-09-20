@@ -246,6 +246,29 @@ export type AgentEvent = z.infer<typeof AgentEvent>;
 export const RunSource = z.enum(["observed", "self-reported"]);
 export type RunSource = z.infer<typeof RunSource>;
 
+/**
+ * PRD3 F12 — `AgentRun.source` derived from its constituent events' own
+ * `provenance`, rather than a literal a capture path hardcodes. The
+ * weakest provenance present wins: a single `self-reported` event (the
+ * agent's own harness authoring a claim about itself) is enough to mark
+ * the whole run self-reported, exactly as `runSourceAdvisory` intends —
+ * one untrustworthy claim is enough to warrant extra scrutiny of the
+ * entire run, not just that one event. Every other provenance
+ * (`wire`, `harness`, `imported`) — and events carrying no provenance at
+ * all, e.g. a fixture predating this field — is at least independently
+ * attributable and rolls up to `"observed"`, the default that predates
+ * per-event provenance entirely (kept for backward compatibility: a run
+ * persisted before this field existed, and every event within it, loads
+ * exactly as before).
+ */
+export function deriveRunSource(events: readonly Pick<BaseEventShape, "provenance">[]): RunSource {
+  return events.some((e) => e.provenance === "self-reported") ? "self-reported" : "observed";
+}
+
+interface BaseEventShape {
+  provenance?: EventProvenance;
+}
+
 export const AgentRun = z.object({
   id: z.string(),
   task: z.string(),

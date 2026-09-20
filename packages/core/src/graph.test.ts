@@ -182,14 +182,30 @@ describe("DefaultEvidenceCompiler — per-event provenance (PRD3 F12)", () => {
     expect(graph.byType("network")[0]!.provenance).toBe("self-reported");
   });
 
-  it("leaves provenance undefined for an event that carries none (pre-F12 runs)", async () => {
-    const run = AgentRun.parse({
+  it("backfills a missing event's provenance from run.source rather than leaving it undefined (pre-F12 runs, PRD3 F12 acceptance)", async () => {
+    const observedRun = AgentRun.parse({
       ...BASE,
       task: "Add a todo.",
       events: [{ id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "tool_call", callId: "c1", tool: "add_todo", arguments: {} }],
     });
-    const graph = await new DefaultEvidenceCompiler().compile(run);
-    expect(graph.byType("tool_call")[0]!.provenance).toBeUndefined();
+    const observedGraph = await new DefaultEvidenceCompiler().compile(observedRun);
+    // Acceptance text: "default `wire` for observed runs" — an old
+    // observed run's untagged events are not weaker evidence than a
+    // freshly-captured wire event, just untagged; backfilling lets
+    // `minProvenance` treat them the same rather than as "unknown".
+    expect(observedGraph.byType("tool_call")[0]!.provenance).toBe("wire");
+
+    const selfReportedRun = AgentRun.parse({
+      ...BASE,
+      task: "Add a todo.",
+      source: "self-reported",
+      events: [{ id: "ev-1", timestamp: "2026-09-20T00:00:00.100Z", seq: 1, type: "tool_call", callId: "c1", tool: "add_todo", arguments: {} }],
+    });
+    const selfReportedGraph = await new DefaultEvidenceCompiler().compile(selfReportedRun);
+    // "... `self-reported` for runs tagged so" — an old self-reported
+    // run's untagged events must not be backfilled to `wire`, or a
+    // `minProvenance: "wire"` requirement would wrongly trust them.
+    expect(selfReportedGraph.byType("tool_call")[0]!.provenance).toBe("self-reported");
   });
 
   it("tags the task and the final claim 'harness' by default, and 'self-reported' when the run itself is", async () => {

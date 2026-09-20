@@ -53,12 +53,15 @@ export interface EvidenceRequirement {
   /**
    * PRD3 F12 — when set, an evidence item only counts toward `min` if its
    * `provenance` ranks at or above this value (`PROVENANCE_RANK` above).
-   * Not used by any of the 21 shipped assertions today — every existing
-   * fixture predates the `provenance` field, so retrofitting one onto a
-   * shipped requirement would turn a real PASS into a REVIEW across the
-   * whole golden suite purely because its fixtures carry no provenance,
-   * not because the evidence is actually weaker. See `requirements.test.ts`
-   * for the mechanism proven directly against a synthetic requirement.
+   * Safe to use on a shipped requirement without breaking every fixture
+   * that predates the `provenance` field: `DefaultEvidenceCompiler`
+   * (`graph.ts`) backfills a missing event's provenance from `run.source`
+   * (`wire` for an observed run, `self-reported` for a self-reported one)
+   * before `minProvenance` ever sees it, so an old/untagged golden fixture
+   * reads as `wire`, not "unknown". `noFabricatedCompletion` below is the
+   * PRD3 F12 acceptance case itself. See `requirements.test.ts` for the
+   * mechanism proven against a synthetic requirement, and
+   * `claimChecks.test.ts` for the real assertion end to end.
    */
   minProvenance?: EventProvenance;
   unmet: "review" | "not_applicable";
@@ -85,9 +88,15 @@ export const REQUIREMENTS: Record<AssertionId, AssertionRequirements> = {
   noFabricatedCompletion: {
     requires: [
       { type: "agent_claim", min: 1, unmet: "not_applicable" }, // no claim → nothing to fabricate
-      { type: "network", min: 1, unmet: "review" }, // claim present, no evidence to check it
+      // PRD3 F12 acceptance: a self-reported network event ("the agent
+      // says a 200 happened") is the agent's own claim about the world,
+      // not independent evidence of it — exactly the kind of "no network
+      // calls happened" self-report TRD §9.2 says is not evidence of no
+      // network calls. Only wire-or-better (proxy-observed, harness, or
+      // an imported trace) counts toward this requirement.
+      { type: "network", min: 1, minProvenance: "wire", unmet: "review" }, // claim present, no evidence to check it
     ],
-    reason: "cannot check a completion claim without claims and network evidence",
+    reason: "cannot check a completion claim without claims and independently-observed network evidence",
   },
   toolWasAppropriate: {
     requires: [{ type: "tool_call", min: 1, unmet: "not_applicable" }],

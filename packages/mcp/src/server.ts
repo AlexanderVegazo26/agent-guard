@@ -6,6 +6,7 @@ import {
   DefaultEvidenceCompiler,
   FaultSpec,
   defineConfig,
+  deriveRunSource,
   type AgentRun,
   type AssertionId,
   type AssertionResult,
@@ -107,6 +108,11 @@ export class AgentGuardMcpServer {
       startedAt: state.startedAt,
       endedAt: state.endedAt,
       schemaVersion: 1,
+      // PRD3 F12 — a run registered here can arrive with caller-supplied
+      // events (tagged "self-reported" unless the caller already marked
+      // them otherwise) or a "harness"-tagged injected fault from
+      // agentguard_mutate; derive rather than hardcode either way.
+      source: deriveRunSource(state.events),
     };
   }
 
