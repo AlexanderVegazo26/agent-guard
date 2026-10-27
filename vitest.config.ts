@@ -14,6 +14,7 @@ export default defineConfig({
       "@alexvegman/assertions": path.resolve(__dirname, "packages/assertions/src/index.ts"),
       "@alexvegman/observe": path.resolve(__dirname, "packages/observe/src/index.ts"),
       "@alexvegman/mcp": path.resolve(__dirname, "packages/mcp/src/index.ts"),
+      "@alexvegman/mutations": path.resolve(__dirname, "packages/mutations/src/index.ts"),
       "@alexvegman/cli": path.resolve(__dirname, "packages/cli/src/index.ts"),
       "@alexvegman/toolsmith-core": path.resolve(__dirname, "packages/toolsmith-core/src/index.ts"),
       "@alexvegman/toolsmith-engine": path.resolve(__dirname, "packages/toolsmith-engine/src/index.ts"),
